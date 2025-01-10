@@ -3,6 +3,7 @@ const cors = require("cors");
 const helmet = require("helmet");
 const bodyParser = require("body-parser"); // Importa body-parser
 require("dotenv").config(); // Carica variabili d'ambiente
+const mysql = require('mysql2');
 
 const commesseRoutes = require("./routes/commesse");
 const risorseRoutes = require("./routes/risorse");
@@ -15,6 +16,24 @@ const commessaStatiRoutes = require("./routes/stati-avanzamento");
 const notificheRoutes = require("./routes/notifiche");
 
 const app = express();
+
+
+// Connessione al database MySQL con variabili d'ambiente
+const connection = mysql.createConnection({
+  host: process.env.DB_HOST,
+  user: process.env.DB_USER,
+  password: process.env.DB_PASSWORD,
+  database: process.env.DB_NAME,
+});
+
+// Connessione al database
+connection.connect((err) => {
+  if (err) {
+    console.error("Errore di connessione al database: ", err);
+    return;
+  }
+  console.log("Connesso al database MySQL!");
+});
 
 // Middleware di sicurezza e configurazione
 app.use(helmet()); // Aggiunge intestazioni di sicurezza

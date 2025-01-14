@@ -30,6 +30,7 @@ const formatCommesseData = (results) => {
   }, []);
 };
 
+
 // Ottenere tutte le commesse con stati avanzamento raggruppati
 router.get("/", async (req, res) => {
   const sql = `
@@ -40,6 +41,7 @@ router.get("/", async (req, res) => {
       c.descrizione, 
       c.data_consegna, 
       c.altri_particolari,
+      c.stato_commessa,  -- Aggiungi il campo stato_commessa
       GROUP_CONCAT(CONCAT(r.nome, ': ', sa.nome_stato) SEPARATOR '; ') AS stati_avanzamento
     FROM commesse c
     LEFT JOIN commessa_stati cs ON c.id = cs.commessa_id
@@ -55,7 +57,6 @@ router.get("/", async (req, res) => {
     res.status(500).send("Errore durante il recupero delle commesse.");
   }
 });
-
 
 // Ottenere tutte le commesse con dettagli stati avanzamento
 router.get("/stati", async (req, res) => {
@@ -255,6 +256,46 @@ router.post("/", async (req, res) => {
     res.status(500).send("Errore durante l'inserimento della commessa.");
   }
 });
+
+// Ottieni tutti gli stati della commessa
+router.get("/stati-commessa", async (req, res) => {
+  const sql = "SELECT * FROM stati_commessa ORDER BY ordine";
+  try {
+    const [stati] = await db.query(sql);
+    res.json(stati);
+  } catch (err) {
+    console.error("Errore nel recupero degli stati:", err);
+    res.status(500).send("Errore nel recupero degli stati.");
+  }
+});
+
+// Aggiornare lo stato di una commessa
+router.put("/commessa/:id", async (req, res) => {
+  const { id } = req.params;
+  const { stato_commessa_id } = req.body;
+
+  if (!stato_commessa_id) {
+    return res.status(400).json({ error: "Lo stato della commessa è obbligatorio." });
+  }
+
+  const query = `
+    UPDATE commesse 
+    SET stato_commessa_id = ? 
+    WHERE id = ?
+  `;
+
+  try {
+    const [result] = await db.query(query, [stato_commessa_id, id]);
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ error: "Commessa non trovata." });
+    }
+    res.status(200).json({ message: "Stato commessa aggiornato con successo." });
+  } catch (error) {
+    console.error("Errore durante l'aggiornamento dello stato della commessa:", error);
+    res.status(500).json({ error: "Errore interno del server." });
+  }
+});
+
 
 
 module.exports = router;

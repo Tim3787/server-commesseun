@@ -1,10 +1,11 @@
 const mysql = require("mysql2/promise");
 
 const db = mysql.createPool({
-  host: "localhost",
-  user: "root",
-  password: "La_Mia_Passwor@1",
-  database: "gestione_commesse",
+  host: "database-1.ct2yk8ewuzpb.eu-north-1.rds.amazonaws.com",
+  user: "commesseun",
+  password: "66548765443",
+  database: "commesseun3",
+  port: 3306,
   timezone: "Z", // Forza UTC
 });
 

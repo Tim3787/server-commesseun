@@ -14,6 +14,7 @@ const userRoutes = require("./routes/user");
 const statiAvanzamentoRoutes = require("./routes/stati-avanzamento");
 const commessaStatiRoutes = require("./routes/stati-avanzamento");
 const notificheRoutes = require("./routes/notifiche");
+const statoCommessaRoutes  = require("./routes/stato-commessa.js");
 
 const app = express();
 
@@ -51,6 +52,7 @@ app.use("/api/users", userRoutes);
 app.use("/api/stati-avanzamento", statiAvanzamentoRoutes);
 app.use("/api/commessa-stati", commessaStatiRoutes);
 app.use("/api/notifiche", notificheRoutes)
+app.use("/api/stato-commessa", statoCommessaRoutes);
 
 // Middleware di gestione degli errori
 app.use((err, req, res, next) => {
@@ -64,4 +66,12 @@ app.use((err, req, res, next) => {
 const PORT = process.env.PORT || 5000; // Usa variabile d'ambiente PORT, se disponibile
 app.listen(PORT, () => {
   console.log(`Server in esecuzione sulla porta ${PORT}`);
+});
+
+connection.connect((err) => {
+  if (err) {
+    console.error('Errore di connessione al database:', err.stack);
+    return;
+  }
+  console.log('Connesso al database Amazon RDS');
 });

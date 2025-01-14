@@ -15,7 +15,6 @@ router.get("/", async (req, res) => {
 
 
 // Aggiungere una nuova attività
-// Aggiungere una nuova attività
 router.post("/", async (req, res) => {
   const { nome_attivita, reparto_id } = req.body;
 

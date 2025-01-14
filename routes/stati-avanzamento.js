@@ -53,6 +53,17 @@ router.post("/", async (req, res) => {
   }
 
   try {
+    // Verifica se esiste già uno stato con lo stesso nome per il reparto
+    const [existingState] = await db.query(
+      "SELECT * FROM stati_avanzamento WHERE nome_stato = ? AND reparto_id = ?",
+      [nome_stato, reparto_id]
+    );
+
+    // Se esiste già, non creiamo un nuovo stato, ma usiamo quello esistente
+    if (existingState.length > 0) {
+      return res.status(400).send("Stato di avanzamento già esistente per questo reparto.");
+    }
+
     // Determina l'ordine per il nuovo stato
     const ordineSql = `
       SELECT COALESCE(MAX(ordine), 0) + 1 AS nuovo_ordine
@@ -88,7 +99,7 @@ router.post("/", async (req, res) => {
 
       // Controlla se `stati_avanzamento` è una stringa
       if (typeof statiAvanzamento === 'string') {
-        statiAvanzamento = JSON.parse(statiAvanzamento);  // Parsing se è una stringa
+        statiAvanzamento = JSON.parse(statiAvanzamento);  // Parsing se è una string
       }
 
       // Verifica se lo stato esiste già
@@ -122,6 +133,7 @@ router.post("/", async (req, res) => {
     res.status(500).send("Errore durante l'aggiunta dello stato di avanzamento");
   }
 });
+
 
 
 

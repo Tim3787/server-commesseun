@@ -31,23 +31,27 @@ const handleDateFormatting = (data) => {
   return '';  // Se non c'è data, restituisci una stringa vuota
 }
 
+
 // Endpoint per ottenere tutte le commesse con stati avanzamento dettagliati
 router.get("/", async (req, res) => {
   const sql = `
-    SELECT 
-      c.id AS commessa_id,
-      c.numero_commessa,
-      c.tipo_macchina,
-      c.descrizione,
-      c.data_consegna,
-      c.altri_particolari,
-      c.cliente,  -- Aggiungi il campo cliente
-      r.id AS reparto_id,
-      r.nome AS reparto_nome,
-      c.stati_avanzamento
-    FROM commesse c
-    JOIN reparti r ON r.id IS NOT NULL
-    ORDER BY c.id, r.id
+SELECT 
+  c.id AS commessa_id,
+  c.numero_commessa,
+  c.tipo_macchina,
+  c.descrizione,
+  c.data_consegna,
+  c.altri_particolari,
+  c.cliente, 
+  c.stato_commessa,  -- Solo l'ID dello stato
+  r.id AS reparto_id,
+  r.nome AS reparto_nome,
+  c.stati_avanzamento
+FROM commesse c
+LEFT JOIN stati_commessa sc ON c.stato_commessa = sc.id  -- Associa l'ID dello stato alla commessa
+JOIN reparti r ON r.id IS NOT NULL
+ORDER BY c.id, r.id
+
   `;
 
   try {
@@ -65,6 +69,7 @@ router.get("/", async (req, res) => {
           data_consegna: row.data_consegna,
           altri_particolari: row.altri_particolari,
           cliente: row.cliente,  // Aggiungi cliente nei dati
+          stato: row.stato_commessa,
           stati_avanzamento: [] // Lista di reparti
         };
       }
@@ -103,7 +108,6 @@ router.get("/", async (req, res) => {
     res.status(500).send("Errore durante il recupero delle commesse.");
   }
 });
-
 
 
 
@@ -407,6 +411,30 @@ router.put("/:commessaId/stati-avanzamento/:statoId", async (req, res) => {
 });
 
 
+// Modificare uno stato esistente della commessa
+router.put("/:id/stato", async (req, res) => {
+  const { id } = req.params; // ID della commessa
+  const { stato_commessa } = req.body; // Nuovo stato da impostare
+
+  // Verifica che stato_commessa sia stato fornito
+  if (!stato_commessa) {
+    return res.status(400).json({ error: "Lo stato della commessa è richiesto." });
+  }
+
+  const sql = "UPDATE commesse SET stato_commessa = ? WHERE id = ?"; // Query per aggiornare lo stato della commessa
+  try {
+    const [result] = await db.query(sql, [stato_commessa, id]);
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ error: "Commessa non trovata o stato non aggiornato." });
+    }
+
+    res.status(200).json({ message: "Stato della commessa aggiornato con successo." });
+  } catch (err) {
+    console.error("Errore durante l'aggiornamento dello stato della commessa:", err);
+    res.status(500).send("Errore durante l'aggiornamento dello stato.");
+  }
+});
 
 
 module.exports = router;

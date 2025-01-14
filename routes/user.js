@@ -26,6 +26,8 @@ const authenticateToken = (req, res, next) => {
     res.status(403).send("Token non valido.");
   }
 };
+
+
 // Rotta di registrazione
 router.post("/register", async (req, res) => {
   const { username, password, email } = req.body;
@@ -261,23 +263,28 @@ router.put("/:id", async (req, res) => {
 
 
 router.get("/dashboard", authenticateToken, async (req, res) => {
-  const userId = req.user.id;
+  const userId = req.user.id;  // ID dell'utente autenticato
+  console.log("ID dell'utente autenticato:", userId);  // Verifica che l'ID sia corretto
 
   const sql = `
-    SELECT a.*, c.numero_commessa
+    SELECT a.*, c.numero_commessa, att.nome_attivita
     FROM attivita_commessa a
     JOIN commesse c ON a.commessa_id = c.id
-    WHERE a.risorsa_id = (SELECT risorsa_id FROM users WHERE id = ?)
+    JOIN attivita att ON a.attivita_id = att.id
+    WHERE a.risorsa_id = (SELECT risorsa_id FROM users WHERE id = ?);
   `;
 
   try {
-    const [results] = await db.query(sql, [userId]);
+    const [results] = await db.query(sql, [userId]); // Passa userId come parametro
+    console.log("Attività recuperate:", results);  // Verifica che i risultati siano quelli giusti
     res.json(results);
   } catch (err) {
     console.error("Errore nel recupero delle attività:", err);
     res.status(500).send("Errore nel recupero delle attività.");
   }
 });
+
+
 
 
 router.put("/:id/assign-resource", async (req, res) => {

@@ -27,15 +27,6 @@ const connection = mysql.createConnection({
   database: process.env.DB_NAME,
 });
 
-// Connessione al database
-connection.connect((err) => {
-  if (err) {
-    console.error("Errore di connessione al database: ", err);
-    return;
-  }
-  console.log("Connesso al database MySQL!");
-});
-
 // Middleware di sicurezza e configurazione
 app.use(helmet()); // Aggiunge intestazioni di sicurezza
 app.use(cors()); // Abilita le richieste cross-origin

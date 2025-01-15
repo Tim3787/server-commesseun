@@ -18,14 +18,23 @@ const authenticateToken = (req, res, next) => {
   }
 
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET); // Assicurati di avere una chiave segreta nel file .env
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
     req.user = decoded;
     next();
   } catch (err) {
+    if (err.name === "TokenExpiredError") {
+      console.error("Token scaduto.");
+      return res.status(401).send("Token scaduto. Effettua nuovamente il login.");
+    }
     console.error("Errore durante la verifica del token JWT:", err);
     res.status(403).send("Token non valido.");
   }
 };
+
+
+sessionStorage.setItem("authToken", token);
+
+sessionStorage.removeItem("authToken");
 
 
 // Rotta di registrazione

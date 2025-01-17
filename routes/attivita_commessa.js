@@ -144,14 +144,29 @@ router.put("/:id", async (req, res) => {
     SET ${fieldsToUpdate.join(", ")} 
     WHERE id = ?
   `;
+  const sqlLog = `
+  INSERT INTO activity_status_log (attivita_commessa_id, stato, updated_by) 
+  VALUES (?, ?, ?)
+`;
+try {
+  // Aggiorna l'attività
+  const [updateResult] = await db.query(sqlUpdate, values);
 
-  try {
-    await db.query(sql, values);
-    res.send("Attività aggiornata con successo!");
-  } catch (err) {
-    console.error("Errore durante la modifica dell'attività:", err);
-    res.status(500).send("Errore durante la modifica dell'attività.");
+  if (updateResult.affectedRows === 0) {
+    return res.status(404).send("Attività non trovata.");
   }
+
+  // Se lo stato è stato aggiornato, registra il log
+  if (stato !== undefined) {
+    const updatedBy = req.user?.id || null; // ID dell'utente, se disponibile
+    await db.query(sqlLog, [id, stato, updatedBy]);
+  }
+
+  res.send("Attività aggiornata con successo e log registrato!");
+} catch (err) {
+  console.error("Errore durante la modifica dell'attività:", err);
+  res.status(500).send("Errore durante la modifica dell'attività.");
+}
 });
 
 // Eliminare un'attività

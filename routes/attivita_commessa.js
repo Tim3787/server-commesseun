@@ -19,7 +19,8 @@ router.get("/", async (req, res) => {
   ac.attivita_id, 
   ad.nome_attivita, 
   ac.data_inizio, 
-  ac.durata 
+  ac.durata,
+   ac.stato 
 FROM attivita_commessa ac
 JOIN commesse c ON ac.commessa_id = c.id
 LEFT JOIN risorse r ON ac.risorsa_id = r.id
@@ -103,18 +104,49 @@ const formatDateForMySQL = (isoDate) => {
 // Modificare un'attività
 router.put("/:id", async (req, res) => {
   const { id } = req.params;
-  const { commessa_id, risorsa_id, attivita_id, data_inizio, durata } = req.body;
+  const { commessa_id, risorsa_id, attivita_id, data_inizio, durata, stato } = req.body;
 
-  const formattedDataInizio = formatDateForMySQL(data_inizio);
+  const formattedDataInizio = data_inizio ? formatDateForMySQL(data_inizio) : null;
+
+  // Costruisci dinamicamente la query per aggiornare solo i campi forniti
+  const fieldsToUpdate = [];
+  const values = [];
+
+  if (commessa_id) {
+    fieldsToUpdate.push("commessa_id = ?");
+    values.push(commessa_id);
+  }
+  if (risorsa_id) {
+    fieldsToUpdate.push("risorsa_id = ?");
+    values.push(risorsa_id);
+  }
+  if (attivita_id) {
+    fieldsToUpdate.push("attivita_id = ?");
+    values.push(attivita_id);
+  }
+  if (formattedDataInizio) {
+    fieldsToUpdate.push("data_inizio = ?");
+    values.push(formattedDataInizio);
+  }
+  if (durata) {
+    fieldsToUpdate.push("durata = ?");
+    values.push(durata);
+  }
+  if (stato !== undefined) {
+    fieldsToUpdate.push("stato = ?");
+    values.push(stato);
+  }
+
+  values.push(id);
 
   const sql = `
     UPDATE attivita_commessa 
-    SET commessa_id = ?, risorsa_id = ?, attivita_id = ?, data_inizio = ?, durata = ? 
+    SET ${fieldsToUpdate.join(", ")} 
     WHERE id = ?
   `;
+
   try {
-    console.log("Formatted data_inizio:", formattedDataInizio);
-    await db.query(sql, [commessa_id, risorsa_id, attivita_id, formattedDataInizio, durata, id]);
+    await db.query(sql, values);
     res.send("Attività aggiornata con successo!");
   } catch (err) {
     console.error("Errore durante la modifica dell'attività:", err);

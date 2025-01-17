@@ -32,10 +32,6 @@ const authenticateToken = (req, res, next) => {
 };
 
 
-sessionStorage.setItem("authToken", token);
-
-sessionStorage.removeItem("authToken");
-
 
 // Rotta di registrazione
 router.post("/register", async (req, res) => {

@@ -150,7 +150,7 @@ router.put("/:id", async (req, res) => {
 `;
 try {
   // Aggiorna l'attività
-  const [updateResult] = await db.query(sqlUpdate, values);
+  const [updateResult] = await db.query(sql, values);
 
   if (updateResult.affectedRows === 0) {
     return res.status(404).send("Attività non trovata.");

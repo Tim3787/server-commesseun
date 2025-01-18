@@ -79,6 +79,12 @@ router.post("/", async (req, res) => {
 
 const [result] = await db.query(query, [commessa_id, reparto_id, risorsa_id, attivita_id, data_inizio, durata]);
 
+const [userExists] = await db.query("SELECT id FROM users WHERE id = ?", [risorsa_id]);
+if (userExists.length === 0) {
+  return res.status(400).send("L'utente specificato non esiste.");
+}
+console.log("Risorsa ID ricevuto:", risorsa_id);
+
     // Crea una notifica per il responsabile (risorsa_id)
     const message = `Ti è stata assegnata una nuova attività con ID ${result.insertId}.`;
     await db.query(

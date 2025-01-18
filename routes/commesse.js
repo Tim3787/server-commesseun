@@ -46,6 +46,8 @@ SELECT
   c.stato_commessa,  -- Solo l'ID dello stato
   r.id AS reparto_id,
   r.nome AS reparto_nome,
+  c.data_FAT,
+  c.data_Riunione,
   c.stati_avanzamento
 FROM commesse c
 LEFT JOIN stati_commessa sc ON c.stato_commessa = sc.id  -- Associa l'ID dello stato alla commessa

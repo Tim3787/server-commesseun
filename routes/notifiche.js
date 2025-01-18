@@ -16,7 +16,7 @@ const authenticate = (req, res, next) => {
 
 router.use(authenticate);
 
-rrouter.get("/", async (req, res) => {
+router.get("/", async (req, res) => {
   try {
     // Ottieni il risorsa_id dall'utente autenticato
     const risorsa_id = req.user?.risorsa_id;

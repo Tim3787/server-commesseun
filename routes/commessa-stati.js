@@ -25,7 +25,7 @@ router.get("/:commessa_id", async (req, res) => {
 
 
 // Aggiungi un nuovo stato di avanzamento per una commessa
-rrouter.post("/", async (req, res) => {
+router.post("/", async (req, res) => {
   const { commessa_id, reparto_id, stato_avanzamento_id, data_inizio, data_fine } = req.body;
 
   try {

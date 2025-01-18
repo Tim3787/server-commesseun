@@ -69,6 +69,7 @@ ORDER BY c.id, r.id
           tipo_macchina: row.tipo_macchina,
           descrizione: row.descrizione,
           data_consegna: row.data_consegna,
+          data_FAT: row.data_FAT,
           altri_particolari: row.altri_particolari,
           cliente: row.cliente,  // Aggiungi cliente nei dati
           stato: row.stato_commessa,

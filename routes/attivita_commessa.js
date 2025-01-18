@@ -62,7 +62,6 @@ WHERE 1=1;
   }
 });
 
-
 // Assegnare un'attività a una commessa
 router.post("/", async (req, res) => {
   const { commessa_id, reparto_id, risorsa_id, attivita_id, data_inizio, durata } = req.body;
@@ -72,34 +71,38 @@ router.post("/", async (req, res) => {
   }
 
   try {
+    // Verifica se la risorsa esiste
+    const [risorsaExists] = await db.query("SELECT id FROM risorse WHERE id = ?", [risorsa_id]);
+    if (risorsaExists.length === 0) {
+      return res.status(400).send("Errore: La risorsa specificata non esiste.");
+    }
+
+    // Verifica se esiste un utente associato a questa risorsa
+    const [user] = await db.query("SELECT id FROM users WHERE risorsa_id = ?", [risorsa_id]);
+    if (user.length === 0) {
+      return res.status(400).send("Errore: Nessun utente associato a questa risorsa.");
+    }
+
+    const userId = user[0].id; // Ottieni l'ID utente
+
+    // Inserisce l'attività
     const query = `
       INSERT INTO attivita_commessa (commessa_id, reparto_id, risorsa_id, attivita_id, data_inizio, durata)
       VALUES (?, ?, ?, ?, ?, ?)
     `;
+    const [result] = await db.query(query, [commessa_id, reparto_id, risorsa_id, attivita_id, data_inizio, durata]);
 
-const [result] = await db.query(query, [commessa_id, reparto_id, risorsa_id, attivita_id, data_inizio, durata]);
-
-const [userExists] = await db.query("SELECT id FROM users WHERE id = ?", [risorsa_id]);
-if (userExists.length === 0) {
-  return res.status(400).send("L'utente specificato non esiste.");
-}
-console.log("Risorsa ID ricevuto:", risorsa_id);
-
-    // Crea una notifica per il responsabile (risorsa_id)
+    // Crea una notifica per l'utente responsabile (userId)
     const message = `Ti è stata assegnata una nuova attività con ID ${result.insertId}.`;
-    await db.query(
-      "INSERT INTO notifications (user_id, message) VALUES (?, ?)",
-      [risorsa_id, message]
-    );
+    await db.query("INSERT INTO notifications (user_id, message) VALUES (?, ?)", [userId, message]);
 
     res.status(201).send("Attività assegnata con successo!");
+    
   } catch (error) {
     console.error("Errore durante l'assegnazione dell'attività:", error);
     res.status(500).send("Errore durante l'assegnazione dell'attività.");
   }
 });
-
-
 
 
 

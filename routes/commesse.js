@@ -124,6 +124,7 @@ router.put("/:id", async (req, res) => {
     tipo_macchina = "",
     descrizione = "",
     data_consegna = null,
+    data_FAT = null,
     altri_particolari = "",
     cliente = "",
   } = req.body;
@@ -150,6 +151,7 @@ router.put("/:id", async (req, res) => {
         tipo_macchina,
         descrizione,
         data_consegna,
+        data_FAT,
         altri_particolari,
         cliente,
         id,

@@ -1,6 +1,6 @@
 const express = require("express");
 const router = express.Router();
-const db = require("../db"); // Importa il pool di connessione
+const db = require("../config/db");
 const authenticate = (req, res, next) => {
   const token = req.headers.authorization?.split(" ")[1];
   if (!token) return res.status(401).send("Accesso negato.");

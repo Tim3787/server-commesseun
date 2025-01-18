@@ -78,6 +78,9 @@ router.post("/", async (req, res) => {
     `;
 
     await db.query(query, [commessa_id, reparto_id, risorsa_id, attivita_id, data_inizio, durata]);
+    
+// Salva il risultato della query
+const [result] = await db.query(query, [commessa_id, reparto_id, risorsa_id, attivita_id, data_inizio, durata]);
 
     // Crea una notifica per il responsabile (risorsa_id)
     const message = `Ti è stata assegnata una nuova attività con ID ${result.insertId}.`;

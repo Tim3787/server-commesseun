@@ -16,23 +16,43 @@ const authenticate = (req, res, next) => {
 
 router.use(authenticate);
 
-router.get("/", async (req, res) => {
-  const userId = req.user.id;
-  const page = parseInt(req.query.page) || 1;
-  const limit = parseInt(req.query.limit) || 10;
-  const offset = (page - 1) * limit;
-
+rrouter.get("/", async (req, res) => {
   try {
+    // Ottieni il risorsa_id dall'utente autenticato
+    const risorsa_id = req.user?.risorsa_id;
+    if (!risorsa_id) {
+      return res.status(400).send("Errore: risorsa_id non trovato per l'utente autenticato.");
+    }
+
+    // Verifica se l'utente associato alla risorsa esiste
+    const [userExists] = await db.query(
+      "SELECT id FROM users WHERE risorsa_id = ?",
+      [risorsa_id]
+    );
+    if (userExists.length === 0) {
+      return res.status(400).send("Errore: Nessun utente associato a questa risorsa.");
+    }
+
+    const userId = userExists[0].id;
+
+    // Recupera i parametri di paginazione
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const offset = (page - 1) * limit;
+
+    // Recupera le notifiche
     const [notifications] = await db.query(
       "SELECT * FROM notifications WHERE user_id = ? ORDER BY created_at DESC LIMIT ? OFFSET ?",
       [userId, limit, offset]
     );
+
     res.json(notifications);
   } catch (err) {
     console.error("Errore nel recupero delle notifiche:", err);
     res.status(500).send("Errore durante il recupero delle notifiche.");
   }
 });
+
 
 router.get("/global", async (req, res) => {
   try {

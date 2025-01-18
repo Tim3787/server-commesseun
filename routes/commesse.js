@@ -146,7 +146,7 @@ router.put("/:id", async (req, res) => {
 
     // Esegui l'aggiornamento della commessa, mantenendo invariato il campo 'stati_avanzamento'
     await db.query(
-      `UPDATE commesse SET numero_commessa = ?, tipo_macchina = ?, descrizione = ?, data_consegna = ?, altri_particolari = ?, cliente = ? WHERE id = ?`,
+      `UPDATE commesse SET numero_commessa = ?, tipo_macchina = ?, descrizione = ?, data_consegna = ?,data_FAT = ?, altri_particolari = ?, cliente = ? WHERE id = ?`,
       [
         numero_commessa,
         tipo_macchina,

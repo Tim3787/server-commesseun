@@ -79,6 +79,13 @@ router.post("/", async (req, res) => {
 
     await db.query(query, [commessa_id, reparto_id, risorsa_id, attivita_id, data_inizio, durata]);
 
+    // Crea una notifica per il responsabile (risorsa_id)
+    const message = `Ti è stata assegnata una nuova attività con ID ${result.insertId}.`;
+    await db.query(
+      "INSERT INTO notifications (user_id, message) VALUES (?, ?)",
+      [risorsa_id, message]
+    );
+
     res.status(201).send("Attività assegnata con successo!");
   } catch (error) {
     console.error("Errore durante l'assegnazione dell'attività:", error);
@@ -161,7 +168,25 @@ try {
     const updatedBy = req.user?.id || null; // ID dell'utente, se disponibile
     await db.query(sqlLog, [id, stato, updatedBy]);
   }
+// Se lo stato è stato aggiornato, registra il log e invia una notifica
+    if (stato !== undefined) {
+      const updatedBy = req.user?.id || null; // ID dell'utente, se disponibile
+      await db.query(sqlLog, [id, stato, updatedBy]);
 
+      // Invia una notifica in base allo stato
+      const message =
+        stato === 1
+          ? `L'attività con ID ${id} è stata iniziata.`
+          : stato === 2
+          ? `L'attività con ID ${id} è stata completata.`
+          : `L'attività con ID ${id} è stata aggiornata.`;
+
+      const supervisorId = 26; // Cambia con l'ID reale del supervisore
+      await db.query(
+        "INSERT INTO notifications (user_id, message) VALUES (?, ?)",
+        [supervisorId, message]
+      );
+    }
   res.send("Attività aggiornata con successo e log registrato!");
 } catch (err) {
   console.error("Errore durante la modifica dell'attività:", err);

@@ -120,23 +120,87 @@ const formatDateForMySQL = (isoDate) => {
 // Modificare un'attività
 router.put("/:id", async (req, res) => {
   const { id } = req.params;
-  const { commessa_id, risorsa_id, attivita_id, data_inizio, durata } = req.body;
+  const { commessa_id, risorsa_id, attivita_id, data_inizio, durata, stato } = req.body;
 
-  const formattedDataInizio = formatDateForMySQL(data_inizio);
+  const formattedDataInizio = data_inizio ? formatDateForMySQL(data_inizio) : null;
+
+  // Costruisci dinamicamente la query per aggiornare solo i campi forniti
+  const fieldsToUpdate = [];
+  const values = [];
+
+  if (commessa_id) {
+    fieldsToUpdate.push("commessa_id = ?");
+    values.push(commessa_id);
+  }
+  if (risorsa_id) {
+    fieldsToUpdate.push("risorsa_id = ?");
+    values.push(risorsa_id);
+  }
+  if (attivita_id) {
+    fieldsToUpdate.push("attivita_id = ?");
+    values.push(attivita_id);
+  }
+  if (formattedDataInizio) {
+    fieldsToUpdate.push("data_inizio = ?");
+    values.push(formattedDataInizio);
+  }
+  if (durata) {
+    fieldsToUpdate.push("durata = ?");
+    values.push(durata);
+  }
+  if (stato !== undefined) {
+    fieldsToUpdate.push("stato = ?");
+    values.push(stato);
+  }
+
+  values.push(id);
 
   const sql = `
     UPDATE attivita_commessa 
-    SET commessa_id = ?, risorsa_id = ?, attivita_id = ?, data_inizio = ?, durata = ? 
+    SET ${fieldsToUpdate.join(", ")} 
     WHERE id = ?
   `;
-  try {
-    console.log("Formatted data_inizio:", formattedDataInizio);
-    await db.query(sql, [commessa_id, risorsa_id, attivita_id, formattedDataInizio, durata, id]);
-    res.send("Attività aggiornata con successo!");
-  } catch (err) {
-    console.error("Errore durante la modifica dell'attività:", err);
-    res.status(500).send("Errore durante la modifica dell'attività.");
+  const sqlLog = `
+  INSERT INTO activity_status_log (attivita_commessa_id, stato, updated_by) 
+  VALUES (?, ?, ?)
+`;
+try {
+  // Aggiorna l'attività
+  const [updateResult] = await db.query(sql, values);
+
+  if (updateResult.affectedRows === 0) {
+    return res.status(404).send("Attività non trovata.");
   }
+
+  // Se lo stato è stato aggiornato, registra il log
+  if (stato !== undefined) {
+    const updatedBy = req.user?.id || null; // ID dell'utente, se disponibile
+    await db.query(sqlLog, [id, stato, updatedBy]);
+  }
+// Se lo stato è stato aggiornato, registra il log e invia una notifica
+    if (stato !== undefined) {
+      const updatedBy = req.user?.id || null; // ID dell'utente, se disponibile
+      await db.query(sqlLog, [id, stato, updatedBy]);
+
+      // Invia una notifica in base allo stato
+      const message =
+        stato === 1
+          ? `L'attività con ID ${id} è stata iniziata.`
+          : stato === 2
+          ? `L'attività con ID ${id} è stata completata.`
+          : `L'attività con ID ${id} è stata aggiornata.`;
+
+      const supervisorId = 26; // Cambia con l'ID reale del supervisore
+      await db.query(
+        "INSERT INTO notifications (user_id, message) VALUES (?, ?)",
+        [supervisorId, message]
+      );
+    }
+  res.send("Attività aggiornata con successo e log registrato!");
+} catch (err) {
+  console.error("Errore durante la modifica dell'attività:", err);
+  res.status(500).send("Errore durante la modifica dell'attività.");
+}
 });
 
 // Eliminare un'attività

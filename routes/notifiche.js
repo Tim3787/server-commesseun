@@ -30,6 +30,7 @@ router.get("/", async (req, res) => {
       "SELECT id FROM users WHERE risorsa_id = ?",
       [risorsa_id]
     );
+    console.log("Utente autenticato:", req.user);
     if (userExists.length === 0) {
       return res.status(400).send("Errore: Nessun utente associato a questa risorsa.");
     }

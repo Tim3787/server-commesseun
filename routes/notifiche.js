@@ -162,6 +162,7 @@ router.get("/count", async (req, res) => {
     res.status(500).send("Errore durante il conteggio delle notifiche.");
   }
 });
+
 router.get("/unread", async (req, res) => {
   const userId = req.user.id;
   try {

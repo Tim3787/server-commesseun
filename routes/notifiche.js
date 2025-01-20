@@ -1,21 +1,46 @@
 const express = require("express");
 const router = express.Router();
 const db = require("../config/db");
+const jwt = require("jsonwebtoken");
 
-const authenticate = (req, res, next) => {
-  const token = req.headers.authorization?.split(" ")[1];
-  if (!token) return res.status(401).send("Accesso negato.");
+
+
+const authenticateToken = (req, res, next) => {
+  const authHeader = req.headers["authorization"];
+  const token = authHeader && authHeader.split(" ")[1]; // "Bearer TOKEN"
+
+  if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    console.error("Formato del token non valido o assente.");
+    return res.status(401).send("Accesso negato. Nessun token fornito o formato non valido.");
+  }
 
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    console.log("Token decodificato con successo:", decoded);
+
+    // Verifica dei campi richiesti
+    if (!decoded.id || !decoded.role_id) {
+      console.error("Token decodificato privo di campi obbligatori:", decoded);
+      return res.status(403).send("Token non valido.");
+    }
+
+    // Aggiungi le informazioni utente alla richiesta
     req.user = decoded;
     next();
   } catch (err) {
+    if (err.name === "TokenExpiredError") {
+      console.error("Token scaduto:", token);
+      return res.status(401).send("Token scaduto. Effettua nuovamente il login.");
+    }
+
+    console.error("Errore durante la verifica del token JWT:", err.message);
     res.status(403).send("Token non valido.");
   }
 };
 
-router.use(authenticate);
+module.exports = authenticateToken;
+
+
 
 router.get("/", async (req, res) => {
   try {
@@ -31,6 +56,7 @@ router.get("/", async (req, res) => {
       [risorsa_id]
     );
     console.log("Utente autenticato:", req.user);
+    console.log("ID utente:", req.user.id);
     if (userExists.length === 0) {
       return res.status(400).send("Errore: Nessun utente associato a questa risorsa.");
     }
@@ -98,7 +124,8 @@ router.put("/:id/stato", async (req, res) => {
   const { id } = req.params;
   const { stato, reparto_id } = req.body; // `stato`: 1 = iniziata, 2 = completata
   const userId = req.user.id; // Ottieni l'ID utente dal token JWT
-
+  console.log("Utente autenticato:", req.user);
+  console.log("ID utente:", req.user.id);
   try {
     // Aggiorna lo stato dell'attività
     await db.query("UPDATE attivita SET stato = ? WHERE id = ?", [stato, id]);

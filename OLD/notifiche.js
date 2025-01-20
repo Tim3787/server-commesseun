@@ -1,20 +1,50 @@
 const express = require("express");
 const router = express.Router();
 const db = require("../config/db");
-const authenticate = (req, res, next) => {
-  const token = req.headers.authorization?.split(" ")[1];
-  if (!token) return res.status(401).send("Accesso negato.");
+const jwt = require("jsonwebtoken");
+
+
+const authenticateToken = (req, res, next) => {
+  const authHeader = req.headers["authorization"];
+  const token = jwt.sign({ id: user.id, role_id: user.role_id }, process.env.JWT_SECRET, {
+    expiresIn: "1h",
+  });
+  console.log("Token generato:", token);
+  if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    console.error("Formato del token non valido o assente.");
+    return res.status(401).send("Accesso negato. Nessun token fornito o formato non valido.");
+  }
+
+  console.log("Token ricevuto:", token);
 
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    console.log("Token decodificato con successo:", decoded);
+
+    // Verifica dei campi richiesti
+    if (!decoded.id || !decoded.role_id) {
+      console.error("Token decodificato privo di campi obbligatori:", decoded);
+      return res.status(403).send("Token non valido.");
+    }
+
+    // Aggiungi le informazioni utente alla richiesta
     req.user = decoded;
     next();
   } catch (err) {
+    if (err.name === "TokenExpiredError") {
+      console.error("Token scaduto:", token);
+      return res.status(401).send("Token scaduto. Effettua nuovamente il login.");
+    }
+
+    console.error("Errore durante la verifica del token JWT:", err.message);
     res.status(403).send("Token non valido.");
   }
 };
 
-router.use(authenticate);
+
+module.exports = authenticateToken;
+
+
 
 router.get("/", async (req, res) => {
   try {
@@ -29,6 +59,8 @@ router.get("/", async (req, res) => {
       "SELECT id FROM users WHERE risorsa_id = ?",
       [risorsa_id]
     );
+    console.log("Utente autenticato:", req.user);
+    console.log("ID utente:", req.user.id);
     if (userExists.length === 0) {
       return res.status(400).send("Errore: Nessun utente associato a questa risorsa.");
     }
@@ -91,9 +123,16 @@ router.post("/", async (req, res) => {
     res.status(500).send("Errore durante la creazione dell'attività.");
   }
 });
-router.put("/:id/stato", async (req, res) => {
+
+router.put("/:id/stato", authenticateToken, async (req, res) => {
+  console.log("Utente autenticato:", req.user);
+  
+  if (!req.user || !req.user.id) {
+    return res.status(401).send("Utente non autenticato.");
+  }
+
   const { id } = req.params;
-  const { stato, reparto_id } = req.body; // `stato`: 1 = iniziata, 2 = completata
+  const { stato, reparto_id } = req.body;
   const userId = req.user.id; // Ottieni l'ID utente dal token JWT
 
   try {
@@ -107,8 +146,8 @@ router.put("/:id/stato", async (req, res) => {
           ? `L'utente ${userId} ha iniziato l'attività con ID ${id} nel reparto Software.`
           : `L'utente ${userId} ha completato l'attività con ID ${id} nel reparto Software.`;
 
-      // Crea una notifica per il responsabile (sostituisci `responsabileId` con l'ID del responsabile)
-      const responsabileId = 26; // Supponiamo che l'ID sia 1
+      // Crea una notifica per il responsabile
+      const responsabileId = 26; // Supponiamo che l'ID sia 26
       await db.query(
         "INSERT INTO notifications (user_id, message) VALUES (?, ?)",
         [responsabileId, message]
@@ -121,6 +160,7 @@ router.put("/:id/stato", async (req, res) => {
     res.status(500).send("Errore durante l'aggiornamento dello stato dell'attività.");
   }
 });
+
 
 router.put("/:id/read", async (req, res) => {
   const { id } = req.params;

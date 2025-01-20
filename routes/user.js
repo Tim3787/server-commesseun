@@ -43,6 +43,15 @@ const authenticateToken = (req, res, next) => {
 
 module.exports = authenticateToken;
 
+const [activities] = await db.query(
+  "SELECT * FROM activities WHERE user_id = ? ORDER BY created_at DESC",
+  [req.user.id]
+);
+console.log("Query eseguita:", {
+  query: "SELECT * FROM activities WHERE user_id = ? ORDER BY created_at DESC",
+  params: [req.user.id],
+  results: activities,
+});
 
 
 // Rotta di registrazione

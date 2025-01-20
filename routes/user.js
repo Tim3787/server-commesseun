@@ -8,28 +8,40 @@ const router = express.Router();
 
 
 
-// Middleware per autenticazione
 const authenticateToken = (req, res, next) => {
   const authHeader = req.headers["authorization"];
   const token = authHeader && authHeader.split(" ")[1]; // "Bearer TOKEN"
 
-  if (!token) {
-    return res.status(401).send("Accesso negato. Nessun token fornito.");
+  if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    console.error("Formato del token non valido o assente.");
+    return res.status(401).send("Accesso negato. Nessun token fornito o formato non valido.");
   }
 
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    console.log("Token decodificato con successo:", decoded);
+
+    // Verifica dei campi richiesti
+    if (!decoded.id || !decoded.role_id) {
+      console.error("Token decodificato privo di campi obbligatori:", decoded);
+      return res.status(403).send("Token non valido.");
+    }
+
+    // Aggiungi le informazioni utente alla richiesta
     req.user = decoded;
     next();
   } catch (err) {
     if (err.name === "TokenExpiredError") {
-      console.error("Token scaduto.");
+      console.error("Token scaduto:", token);
       return res.status(401).send("Token scaduto. Effettua nuovamente il login.");
     }
-    console.error("Errore durante la verifica del token JWT:", err);
+
+    console.error("Errore durante la verifica del token JWT:", err.message);
     res.status(403).send("Token non valido.");
   }
 };
+
+module.exports = authenticateToken;
 
 
 

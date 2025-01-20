@@ -4,17 +4,15 @@ const db = require("../config/db");
 const jwt = require("jsonwebtoken");
 
 
+
 const authenticateToken = (req, res, next) => {
   const authHeader = req.headers["authorization"];
-  const token = jwt.sign({ id: user.id, role_id: user.role_id }, process.env.JWT_SECRET, {
-    expiresIn: "1h",
-  });
-  console.log("Token generato:", token);
   if (!authHeader || !authHeader.startsWith("Bearer ")) {
     console.error("Formato del token non valido o assente.");
     return res.status(401).send("Accesso negato. Nessun token fornito o formato non valido.");
   }
 
+  const token = authHeader.split(" ")[1]; // Estrai il token (rimuovi "Bearer ")
   console.log("Token ricevuto:", token);
 
   try {
@@ -41,8 +39,8 @@ const authenticateToken = (req, res, next) => {
   }
 };
 
-
 module.exports = authenticateToken;
+
 
 
 
@@ -124,34 +122,20 @@ router.post("/", async (req, res) => {
   }
 });
 
-router.put("/:id/stato", authenticateToken, async (req, res) => {
-  console.log("Utente autenticato:", req.user);
-  
-  if (!req.user || !req.user.id) {
-    return res.status(401).send("Utente non autenticato.");
-  }
-
+router.put("/:id/stato", async (req, res) => {
   const { id } = req.params;
-  const { stato, reparto_id } = req.body;
-  const userId = req.user.id; // Ottieni l'ID utente dal token JWT
+  const { stato } = req.body; // Stato richiesto: 1 = iniziata, 2 = completata
+
+  if (stato === undefined) {
+    return res.status(400).send("Il campo 'stato' è obbligatorio.");
+  }
 
   try {
     // Aggiorna lo stato dell'attività
-    await db.query("UPDATE attivita SET stato = ? WHERE id = ?", [stato, id]);
+    const [result] = await db.query("UPDATE attivita SET stato = ? WHERE id = ?", [stato, id]);
 
-    // Controlla se il reparto è "Software" (id del reparto software)
-    if (reparto_id === 1) {
-      const message =
-        stato === 1
-          ? `L'utente ${userId} ha iniziato l'attività con ID ${id} nel reparto Software.`
-          : `L'utente ${userId} ha completato l'attività con ID ${id} nel reparto Software.`;
-
-      // Crea una notifica per il responsabile
-      const responsabileId = 26; // Supponiamo che l'ID sia 26
-      await db.query(
-        "INSERT INTO notifications (user_id, message) VALUES (?, ?)",
-        [responsabileId, message]
-      );
+    if (result.affectedRows === 0) {
+      return res.status(404).send("Attività non trovata.");
     }
 
     res.status(200).send("Stato dell'attività aggiornato con successo.");

@@ -4,15 +4,18 @@ const db = require("../config/db");
 const jwt = require("jsonwebtoken");
 
 
-
 const authenticateToken = (req, res, next) => {
   const authHeader = req.headers["authorization"];
-  const token = authHeader && authHeader.split(" ")[1]; // "Bearer TOKEN"
-
+  const token = jwt.sign({ id: user.id, role_id: user.role_id }, process.env.JWT_SECRET, {
+    expiresIn: "1h",
+  });
+  console.log("Token generato:", token);
   if (!authHeader || !authHeader.startsWith("Bearer ")) {
     console.error("Formato del token non valido o assente.");
     return res.status(401).send("Accesso negato. Nessun token fornito o formato non valido.");
   }
+
+  console.log("Token ricevuto:", token);
 
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
@@ -37,6 +40,7 @@ const authenticateToken = (req, res, next) => {
     res.status(403).send("Token non valido.");
   }
 };
+
 
 module.exports = authenticateToken;
 
@@ -120,12 +124,17 @@ router.post("/", async (req, res) => {
   }
 });
 
-router.put("/:id/stato", async (req, res) => {
-  const { id } = req.params;
-  const { stato, reparto_id } = req.body; // `stato`: 1 = iniziata, 2 = completata
-  const userId = req.user.id; // Ottieni l'ID utente dal token JWT
+router.put("/:id/stato", authenticateToken, async (req, res) => {
   console.log("Utente autenticato:", req.user);
-  console.log("ID utente:", req.user.id);
+  
+  if (!req.user || !req.user.id) {
+    return res.status(401).send("Utente non autenticato.");
+  }
+
+  const { id } = req.params;
+  const { stato, reparto_id } = req.body;
+  const userId = req.user.id; // Ottieni l'ID utente dal token JWT
+
   try {
     // Aggiorna lo stato dell'attività
     await db.query("UPDATE attivita SET stato = ? WHERE id = ?", [stato, id]);
@@ -137,8 +146,8 @@ router.put("/:id/stato", async (req, res) => {
           ? `L'utente ${userId} ha iniziato l'attività con ID ${id} nel reparto Software.`
           : `L'utente ${userId} ha completato l'attività con ID ${id} nel reparto Software.`;
 
-      // Crea una notifica per il responsabile (sostituisci `responsabileId` con l'ID del responsabile)
-      const responsabileId = 26; // Supponiamo che l'ID sia 1
+      // Crea una notifica per il responsabile
+      const responsabileId = 26; // Supponiamo che l'ID sia 26
       await db.query(
         "INSERT INTO notifications (user_id, message) VALUES (?, ?)",
         [responsabileId, message]
@@ -151,6 +160,7 @@ router.put("/:id/stato", async (req, res) => {
     res.status(500).send("Errore durante l'aggiornamento dello stato dell'attività.");
   }
 });
+
 
 router.put("/:id/read", async (req, res) => {
   const { id } = req.params;

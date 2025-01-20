@@ -147,7 +147,7 @@ router.put("/:id", async (req, res) => {
 
     // Esegui l'aggiornamento della commessa, mantenendo invariato il campo 'stati_avanzamento'
     await db.query(
-      `UPDATE commesse SET numero_commessa = ?, tipo_macchina = ?, descrizione = ?, data_consegna = ?,data_FAT = ?, altri_particolari = ?, cliente = ?, stato = ? WHERE id = ?`,
+      `UPDATE commesse SET numero_commessa = ?, tipo_macchina = ?, descrizione = ?, data_consegna = ?, data_FAT = ?, altri_particolari = ?, cliente = ?, stato = ? WHERE id = ?`,
       [
         numero_commessa,
         tipo_macchina,
@@ -156,8 +156,8 @@ router.put("/:id", async (req, res) => {
         data_FAT,
         altri_particolari,
         cliente,
-        id,
-        stato,
+        stato, // Corretto: stato prima di id
+        id,    // id va come ultimo elemento
       ]
     );
 

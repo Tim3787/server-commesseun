@@ -1,7 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const db = require("../config/db");
- {/*
+
 const authenticate = (req, res, next) => {
   const token = req.headers.authorization?.split(" ")[1];
   if (!token) return res.status(401).send("Accesso negato.");
@@ -15,7 +15,7 @@ const authenticate = (req, res, next) => {
   }
 };
 
-router.use(authenticate);*/}
+router.use(authenticate);
 
 router.get("/", async (req, res) => {
   try {
@@ -92,6 +92,7 @@ router.post("/", async (req, res) => {
     res.status(500).send("Errore durante la creazione dell'attività.");
   }
 });
+
 router.put("/:id/stato", async (req, res) => {
   const { id } = req.params;
   const { stato, reparto_id } = req.body; // `stato`: 1 = iniziata, 2 = completata

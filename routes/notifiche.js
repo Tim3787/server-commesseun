@@ -132,7 +132,7 @@ router.put("/:id/stato", async (req, res) => {
 
   try {
     // Aggiorna lo stato dell'attività
-    const [result] = await db.query("UPDATE attivita SET stato = ? WHERE id = ?", [stato, id]);
+    const [result] = await db.query("UPDATE attivita_commessa SET stato = ? WHERE id = ?", [stato, id]);
 
     if (result.affectedRows === 0) {
       return res.status(404).send("Attività non trovata.");

@@ -53,8 +53,6 @@ WHERE 1=1;
   }
 
   try {
-    console.log("Query SQL:", sql);
-    console.log("Parametri:", params);
     const [results] = await db.query(sql, params);
     res.json(results);
   } catch (err) {
@@ -150,7 +148,6 @@ router.put("/:id", async (req, res) => {
     WHERE id = ?
   `;
   try {
-    console.log("Formatted data_inizio:", formattedDataInizio);
     await db.query(sql, [commessa_id, risorsa_id, attivita_id, formattedDataInizio, durata, descrizione, stato, id]);
     res.send("Attività aggiornata con successo!");
   } catch (err) {

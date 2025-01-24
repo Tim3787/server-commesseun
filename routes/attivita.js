@@ -18,8 +18,6 @@ router.get("/", async (req, res) => {
 router.post("/", async (req, res) => {
   const { nome_attivita, reparto_id } = req.body;
 
-  console.log("Dati ricevuti nel backend:", req.body);
-
   // Validazione input
   if (!nome_attivita || !reparto_id) {
     return res.status(400).send("Nome dell'attività e reparto sono obbligatori.");
@@ -39,7 +37,6 @@ router.post("/", async (req, res) => {
       VALUES (?, ?)
     `;
     const [result] = await db.query(insertAttivitaSql, [nome_attivita, reparto_id]);
-    console.log("Risultato inserimento attività:", result);
 
     res.status(201).send("Attività aggiunta con successo.");
   } catch (err) {

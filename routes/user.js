@@ -19,7 +19,6 @@ const authenticateToken = (req, res, next) => {
 
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    console.log("Token decodificato con successo:", decoded);
 
     // Verifica dei campi richiesti
     if (!decoded.id || !decoded.role_id) {
@@ -65,8 +64,6 @@ router.post("/register", async (req, res) => {
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
-    console.log("Password originale:", password);
-console.log("Password hashata:", hashedPassword);
     await db.query(
       "INSERT INTO users (username, password, email, role_id) VALUES (?, ?, ?, ?)",
       [username, hashedPassword, email, 3] // Imposta di default il ruolo a "User"
@@ -81,7 +78,6 @@ console.log("Password hashata:", hashedPassword);
 
 // Rotta di login
 router.post("/login", async (req, res) => {
-  console.log("Body ricevuto:", req.body);
   const { username, password } = req.body;
 
   if (!username || !password) {
@@ -281,7 +277,7 @@ router.put("/:id", async (req, res) => {
 
 router.get("/dashboard", authenticateToken, async (req, res) => {
   const userId = req.user.id;  // ID dell'utente autenticato
-  console.log("ID dell'utente autenticato:", userId);  // Verifica che l'ID sia corretto
+
 
   const sql = `
     SELECT a.*, c.numero_commessa, att.nome_attivita
@@ -293,7 +289,6 @@ router.get("/dashboard", authenticateToken, async (req, res) => {
 
   try {
     const [results] = await db.query(sql, [userId]); // Passa userId come parametro
-    console.log("Attività recuperate:", results);  // Verifica che i risultati siano quelli giusti
     res.json(results);
   } catch (err) {
     console.error("Errore nel recupero delle attività:", err);

@@ -271,8 +271,6 @@ router.post("/", async (req, res) => {
       return res.status(400).send("Nessun reparto valido trovato.");
     }
 
-    console.log("Reparti trovati:", repartoIds);  // Debug: controlliamo gli ID dei reparti
-
     // Costruisci la query solo se ci sono reparti validi
     const query = `
       SELECT reparto_id, id AS stato_id, nome_stato, ordine

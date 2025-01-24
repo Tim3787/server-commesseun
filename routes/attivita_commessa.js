@@ -65,6 +65,7 @@ WHERE 1=1;
 
 
 // Assegnare un'attività a una commessa
+// Assegnare un'attività a una commessa
 router.post("/", async (req, res) => {
   const {
     commessa_id,
@@ -96,6 +97,22 @@ router.post("/", async (req, res) => {
 
     const userId = user[0].id; // Ottieni l'ID utente
 
+    // Recupera il numero commessa
+    const [commessa] = await db.query("SELECT numero_commessa FROM commesse WHERE id = ?", [commessa_id]);
+    if (commessa.length === 0) {
+      return res.status(400).send("Errore: La commessa specificata non esiste.");
+    }
+
+    const numeroCommessa = commessa[0].numero_commessa;
+
+    // Recupera il tipo di attività
+    const [attivita] = await db.query("SELECT nome_attivita FROM attivita WHERE id = ?", [attivita_id]);
+    if (attivita.length === 0) {
+      return res.status(400).send("Errore: L'attività specificata non esiste.");
+    }
+
+    const tipoAttivita = attivita[0].nome_attivita;
+
     // Inserisce l'attività
     const query = `
       INSERT INTO attivita_commessa (commessa_id, reparto_id, risorsa_id, attivita_id, data_inizio, durata, descrizione, stato)
@@ -113,7 +130,11 @@ router.post("/", async (req, res) => {
     ]);
 
     // Crea una notifica per l'utente responsabile (userId)
-    const message = `Ti è stata assegnata una nuova attività (${result.insertId}) per la commessa ${commessa_id}: ${descrizione}.`;
+    const message = `Ti è stata assegnata una nuova attività: 
+      - Commessa: ${numeroCommessa}
+      - Tipo attività: ${tipoAttivita}
+      - Data inizio: ${new Date(data_inizio).toLocaleDateString()}.`;
+
     await db.query("INSERT INTO notifications (user_id, message) VALUES (?, ?)", [userId, message]);
 
     res.status(201).send("Attività assegnata con successo!");
@@ -122,6 +143,7 @@ router.post("/", async (req, res) => {
     res.status(500).send("Errore durante l'assegnazione dell'attività.");
   }
 });
+
 
 
 const formatDateForMySQL = (isoDate) => {

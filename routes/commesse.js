@@ -443,5 +443,96 @@ router.put("/:id/stato", async (req, res) => {
   }
 });
 
+// Controllare e aggiornare le commesse esistenti con gli stati avanzamento mancanti e garantire che almeno uno stato sia attivo
+router.post("/verifica-stati-commesse", async (req, res) => {
+  try {
+    // Recupera tutti i reparti
+    const [reparti] = await db.query(`SELECT id AS reparto_id FROM reparti`);
+
+    if (reparti.length === 0) {
+      return res.status(400).send("Nessun reparto trovato nel database.");
+    }
+
+    // Recupera tutti gli stati avanzamento per i reparti
+    const [statiPerReparto] = await db.query(`
+      SELECT reparto_id, id AS stato_id, nome_stato, ordine
+      FROM stati_avanzamento
+    `);
+
+    if (statiPerReparto.length === 0) {
+      return res.status(400).send("Nessuno stato avanzamento trovato.");
+    }
+
+    // Recupera tutte le commesse
+    const [commesse] = await db.query(`SELECT id, stati_avanzamento FROM commesse`);
+
+    for (const commessa of commesse) {
+      // Parso gli stati avanzamento dalla commessa
+      let statiAvanzamento = commessa.stati_avanzamento
+        ? JSON.parse(commessa.stati_avanzamento)
+        : [];
+
+      let statiAggiornati = [...statiAvanzamento]; // Copia degli stati esistenti
+
+      for (const reparto of reparti) {
+        const statiReparto = statiPerReparto.filter(
+          (stato) => stato.reparto_id === reparto.reparto_id
+        );
+
+        for (const stato of statiReparto) {
+          // Verifica se lo stato è già presente negli stati della commessa
+          const esiste = statiAvanzamento.some(
+            (statoCommessa) =>
+              statoCommessa.reparto_id === stato.reparto_id &&
+              statoCommessa.stato_id === stato.stato_id
+          );
+
+          if (!esiste) {
+            // Aggiungi lo stato mancante
+            statiAggiornati.push({
+              reparto_id: stato.reparto_id,
+              stato_id: stato.stato_id,
+              nome_stato: stato.nome_stato,
+              ordine: stato.ordine,
+              data_inizio: null,
+              data_fine: null,
+              isActive: false, // Gli stati aggiunti non sono attivi per default
+            });
+          }
+        }
+
+        // Controlla se almeno uno stato del reparto è attivo
+        const statiRepartoAttivi = statiAggiornati.filter(
+          (stato) => stato.reparto_id === reparto.reparto_id && stato.isActive
+        );
+
+        if (statiRepartoAttivi.length === 0) {
+          // Se nessuno stato è attivo, attiva lo stato con l'ordine più basso
+          const statoDaAttivare = statiAggiornati
+            .filter((stato) => stato.reparto_id === reparto.reparto_id)
+            .sort((a, b) => a.ordine - b.ordine)[0];
+
+          if (statoDaAttivare) {
+            statoDaAttivare.isActive = true;
+          }
+        }
+      }
+
+      // Aggiorna la commessa con gli stati avanzamento aggiornati
+      statiAggiornati = JSON.stringify(statiAggiornati);
+      if (statiAggiornati !== JSON.stringify(statiAvanzamento)) {
+        await db.query(`UPDATE commesse SET stati_avanzamento = ? WHERE id = ?`, [
+          statiAggiornati,
+          commessa.id,
+        ]);
+      }
+    }
+
+    res.status(200).send("Verifica e aggiornamento degli stati avanzamento completati.");
+  } catch (err) {
+    console.error("Errore durante la verifica e l'aggiornamento delle commesse:", err);
+    res.status(500).send("Errore durante la verifica e l'aggiornamento delle commesse.");
+  }
+});
 
 module.exports = router;

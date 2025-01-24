@@ -115,6 +115,8 @@ router.put("/:id/stato", getUserIdFromToken, async (req, res) => {
 
 
 
+
+
 router.put("/:id/read", getUserIdFromToken, async (req, res) => {
   const { id } = req.params; // Ottieni l'id della notifica
   try {

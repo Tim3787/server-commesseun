@@ -419,11 +419,11 @@ router.put("/:commessaId/stati-avanzamento/:statoId", async (req, res) => {
 // Modificare uno stato esistente della commessa
 router.put("/:id/stato", async (req, res) => {
   const { id } = req.params; // ID della commessa
-  const { stato_commessa, reparto_id } = req.body; // Nuovo stato e reparto coinvolto
+  const { stato_commessa } = req.body; // Nuovo stato da impostare
 
-  // Verifica che stato_commessa e reparto_id siano stati forniti
-  if (!stato_commessa || !reparto_id) {
-    return res.status(400).json({ error: "Stato della commessa e reparto sono richiesti." });
+  // Verifica che stato_commessa sia stato fornito
+  if (!stato_commessa) {
+    return res.status(400).json({ error: "Lo stato della commessa è richiesto." });
   }
 
   const sql = "UPDATE commesse SET stato_commessa = ? WHERE id = ?"; // Query per aggiornare lo stato della commessa
@@ -434,27 +434,7 @@ router.put("/:id/stato", async (req, res) => {
       return res.status(404).json({ error: "Commessa non trovata o stato non aggiornato." });
     }
 
-    // Logica per le notifiche
-    let userIdToNotify = null; // ID dell'utente da notificare
-    if (reparto_id === 1) {
-      // Se il reparto è software
-      userIdToNotify = 26; // Sostituisci con l'ID utente del responsabile notifiche software
-    } else if (reparto_id === 2) {
-      // Se il reparto è elettrico
-      userIdToNotify = 44; // Sostituisci con l'ID utente di Andrea Scalisi
-    }
-
-    if (userIdToNotify) {
-      // Recupera il numero della commessa per la notifica
-      const [commessa] = await db.query("SELECT numero_commessa FROM commesse WHERE id = ?", [id]);
-      const numeroCommessa = commessa.length > 0 ? commessa[0].numero_commessa : "Sconosciuta";
-
-      // Aggiungi una notifica
-      const message = `Lo stato della commessa ${numeroCommessa} è stato aggiornato a "${stato_commessa}".`;
-      await db.query("INSERT INTO notifications (user_id, message) VALUES (?, ?)", [userIdToNotify, message]);
-    }
-
-    res.status(200).json({ message: "Stato della commessa aggiornato con successo e notifica inviata." });
+    res.status(200).json({ message: "Stato della commessa aggiornato con successo." });
   } catch (err) {
     console.error("Errore durante l'aggiornamento dello stato della commessa:", err);
     res.status(500).send("Errore durante l'aggiornamento dello stato.");

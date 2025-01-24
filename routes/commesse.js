@@ -467,10 +467,21 @@ router.post("/verifica-stati-commesse", async (req, res) => {
     const [commesse] = await db.query(`SELECT id, stati_avanzamento FROM commesse`);
 
     for (const commessa of commesse) {
-      // Parso gli stati avanzamento dalla commessa
-      let statiAvanzamento = commessa.stati_avanzamento
-        ? JSON.parse(commessa.stati_avanzamento)
-        : [];
+      let statiAvanzamento;
+
+      // Verifica se `stati_avanzamento` è un JSON valido o un oggetto
+      if (typeof commessa.stati_avanzamento === "string") {
+        try {
+          statiAvanzamento = JSON.parse(commessa.stati_avanzamento);
+        } catch (err) {
+          console.error(`Errore nel parsing degli stati_avanzamento per la commessa ${commessa.id}:`, err);
+          continue; // Passa alla prossima commessa
+        }
+      } else if (Array.isArray(commessa.stati_avanzamento)) {
+        statiAvanzamento = commessa.stati_avanzamento;
+      } else {
+        statiAvanzamento = [];
+      }
 
       let statiAggiornati = [...statiAvanzamento]; // Copia degli stati esistenti
 
@@ -519,10 +530,10 @@ router.post("/verifica-stati-commesse", async (req, res) => {
       }
 
       // Aggiorna la commessa con gli stati avanzamento aggiornati
-      statiAggiornati = JSON.stringify(statiAggiornati);
-      if (statiAggiornati !== JSON.stringify(statiAvanzamento)) {
+      const statiAggiornatiJson = JSON.stringify(statiAggiornati);
+      if (statiAggiornatiJson !== JSON.stringify(statiAvanzamento)) {
         await db.query(`UPDATE commesse SET stati_avanzamento = ? WHERE id = ?`, [
-          statiAggiornati,
+          statiAggiornatiJson,
           commessa.id,
         ]);
       }
@@ -534,5 +545,6 @@ router.post("/verifica-stati-commesse", async (req, res) => {
     res.status(500).send("Errore durante la verifica e l'aggiornamento delle commesse.");
   }
 });
+
 
 module.exports = router;

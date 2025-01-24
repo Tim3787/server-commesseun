@@ -97,6 +97,28 @@ router.put("/:id/stato", getUserIdFromToken, async (req, res) => {
   }
 
   try {
+    // Recupera i dettagli dell'attività
+    const [activity] = await db.query(`
+      SELECT 
+        ac.id, ac.commessa_id, ac.risorsa_id, ac.attivita_id,
+        c.numero_commessa, ad.nome_attivita, r.reparto_id
+      FROM attivita_commessa ac
+      JOIN commesse c ON ac.commessa_id = c.id
+      JOIN attivita ad ON ac.attivita_id = ad.id
+      JOIN risorse r ON ac.risorsa_id = r.id
+      WHERE ac.id = ?
+    `, [id]);
+
+    if (activity.length === 0) {
+      return res.status(404).send("Attività non trovata.");
+    }
+
+    const numeroCommessa = activity[0].numero_commessa;
+    const tipoAttivita = activity[0].nome_attivita;
+    const repartoId = activity[0].reparto_id;
+    const risorsaId = activity[0].risorsa_id;
+
+    // Aggiorna lo stato dell'attività
     const [result] = await db.query(
       "UPDATE attivita_commessa SET stato = ? WHERE id = ?",
       [stato, id]
@@ -106,12 +128,35 @@ router.put("/:id/stato", getUserIdFromToken, async (req, res) => {
       return res.status(404).send("Attività non trovata.");
     }
 
-    res.status(200).send("Stato dell'attività aggiornato con successo.");
+    // Determina l'utente da notificare
+    let userIdToNotify = null;
+    if (repartoId === 1) {
+      // Reparto software
+      userIdToNotify = 26; // ID utente per il reparto software
+    } else if (repartoId === 2) {
+      // Reparto elettrico
+      userIdToNotify = 44; // ID utente per il reparto elettrico
+    }
+
+    if (userIdToNotify) {
+      // Crea una notifica per il responsabile
+      const message = `Lo stato dell'attività è stato aggiornato:
+        - Commessa: ${numeroCommessa}
+        - Tipo attività: ${tipoAttivita}
+        - Nuovo stato: ${stato === 1 ? "Iniziata" : "Completata"}.`;
+      await db.query(
+        "INSERT INTO notifications (user_id, message) VALUES (?, ?)",
+        [userIdToNotify, message]
+      );
+    }
+
+    res.status(200).send("Stato dell'attività aggiornato con successo e notifica inviata.");
   } catch (err) {
     console.error("Errore durante l'aggiornamento dello stato dell'attività:", err);
     res.status(500).send("Errore durante l'aggiornamento dello stato dell'attività.");
   }
 });
+
 
 
 

@@ -20,7 +20,8 @@ router.get("/", async (req, res) => {
   ad.nome_attivita, 
   ac.data_inizio, 
   ac.durata,
-   ac.stato 
+  ac.stato,
+  ac.descrizione AS descrizione_attivita
 FROM attivita_commessa ac
 JOIN commesse c ON ac.commessa_id = c.id
 LEFT JOIN risorse r ON ac.risorsa_id = r.id
@@ -64,7 +65,7 @@ WHERE 1=1;
 
 // Assegnare un'attività a una commessa
 router.post("/", async (req, res) => {
-  const { commessa_id, reparto_id, risorsa_id, attivita_id, data_inizio, durata } = req.body;
+  const { commessa_id, reparto_id, risorsa_id, attivita_id, data_inizio, durata, descrizione, stato } = req.body;
 
   if (!commessa_id || !reparto_id || !attivita_id || !risorsa_id || !data_inizio || !durata) {
     return res.status(400).send("Tutti i campi sono obbligatori.");
@@ -87,15 +88,14 @@ router.post("/", async (req, res) => {
 
     // Inserisce l'attività
     const query = `
-      INSERT INTO attivita_commessa (commessa_id, reparto_id, risorsa_id, attivita_id, data_inizio, durata)
-      VALUES (?, ?, ?, ?, ?, ?)
+      INSERT INTO attivita_commessa (commessa_id, reparto_id, risorsa_id, attivita_id, data_inizio, durata, descrizione, stato)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
     `;
-    const [result] = await db.query(query, [commessa_id, reparto_id, risorsa_id, attivita_id, data_inizio, durata]);
+    const [result] = await db.query(query, [commessa_id, reparto_id, risorsa_id, attivita_id, data_inizio, durata, descrizione, stato]);
 
     // Crea una notifica per l'utente responsabile (userId)
-    const message = `Ti è stata assegnata una nuova attività con ID ${result.insertId}.`;
+    const message = `Ti è stata assegnata una nuova attività (${result.insertId}) per la commessa ${numero_commessa}: ${descrizione || "Nessuna descrizione fornita"}.`;
     await db.query("INSERT INTO notifications (user_id, message) VALUES (?, ?)", [userId, message]);
-
     res.status(201).send("Attività assegnata con successo!");
     
   } catch (error) {
@@ -120,18 +120,18 @@ const formatDateForMySQL = (isoDate) => {
 // Modificare un'attività
 router.put("/:id", async (req, res) => {
   const { id } = req.params;
-  const { commessa_id, risorsa_id, attivita_id, data_inizio, durata } = req.body;
+  const { commessa_id, risorsa_id, attivita_id, data_inizio, durata, descrizione, stato } = req.body;
 
   const formattedDataInizio = formatDateForMySQL(data_inizio);
 
   const sql = `
     UPDATE attivita_commessa 
-    SET commessa_id = ?, risorsa_id = ?, attivita_id = ?, data_inizio = ?, durata = ? 
+    SET commessa_id = ?, risorsa_id = ?, attivita_id = ?, data_inizio = ?, durata = ? , descrizione = ?, stato = ?
     WHERE id = ?
   `;
   try {
     console.log("Formatted data_inizio:", formattedDataInizio);
-    await db.query(sql, [commessa_id, risorsa_id, attivita_id, formattedDataInizio, durata, id]);
+    await db.query(sql, [commessa_id, risorsa_id, attivita_id, formattedDataInizio, durata, descrizione, stato, id]);
     res.send("Attività aggiornata con successo!");
   } catch (err) {
     console.error("Errore durante la modifica dell'attività:", err);

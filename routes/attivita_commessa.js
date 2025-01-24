@@ -63,9 +63,21 @@ WHERE 1=1;
   }
 });
 
+
+
+
 // Assegnare un'attività a una commessa
 router.post("/", async (req, res) => {
-  const { commessa_id, reparto_id, risorsa_id, attivita_id, data_inizio, durata, descrizione, stato } = req.body;
+  const {
+    commessa_id,
+    reparto_id,
+    risorsa_id,
+    attivita_id,
+    data_inizio,
+    durata,
+    descrizione = "Nessuna descrizione fornita", // Valore predefinito
+    stato,
+  } = req.body;
 
   if (!commessa_id || !reparto_id || !attivita_id || !risorsa_id || !data_inizio || !durata) {
     return res.status(400).send("Tutti i campi sono obbligatori.");
@@ -91,19 +103,27 @@ router.post("/", async (req, res) => {
       INSERT INTO attivita_commessa (commessa_id, reparto_id, risorsa_id, attivita_id, data_inizio, durata, descrizione, stato)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?)
     `;
-    const [result] = await db.query(query, [commessa_id, reparto_id, risorsa_id, attivita_id, data_inizio, durata, descrizione, stato]);
+    const [result] = await db.query(query, [
+      commessa_id,
+      reparto_id,
+      risorsa_id,
+      attivita_id,
+      data_inizio,
+      durata,
+      descrizione, // Usa il valore di descrizione, che ha un valore predefinito
+      stato,
+    ]);
 
     // Crea una notifica per l'utente responsabile (userId)
-    const message = `Ti è stata assegnata una nuova attività (${result.insertId}) per la commessa ${numero_commessa}: ${descrizione || "Nessuna descrizione fornita"}.`;
+    const message = `Ti è stata assegnata una nuova attività (${result.insertId}) per la commessa ${commessa_id}: ${descrizione}.`;
     await db.query("INSERT INTO notifications (user_id, message) VALUES (?, ?)", [userId, message]);
+
     res.status(201).send("Attività assegnata con successo!");
-    
   } catch (error) {
     console.error("Errore durante l'assegnazione dell'attività:", error);
     res.status(500).send("Errore durante l'assegnazione dell'attività.");
   }
 });
-
 
 
 const formatDateForMySQL = (isoDate) => {

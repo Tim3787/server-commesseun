@@ -544,5 +544,86 @@ router.post("/verifica-stati-commesse", async (req, res) => {
   }
 });
 
+router.post("/allinea-stati-commesse", async (req, res) => {
+  try {
+    // Recupera tutti gli stati avanzamento dal database
+    const [statiPerReparto] = await db.query(`
+      SELECT reparto_id, id AS stato_id, nome_stato, ordine
+      FROM stati_avanzamento
+    `);
+
+    if (statiPerReparto.length === 0) {
+      return res.status(400).send("Nessuno stato avanzamento trovato.");
+    }
+
+    // Recupera tutte le commesse
+    const [commesse] = await db.query(`SELECT id, stati_avanzamento FROM commesse`);
+
+    for (const commessa of commesse) {
+      let statiAvanzamento;
+
+      // Verifica se `stati_avanzamento` è un JSON valido o un oggetto
+      if (typeof commessa.stati_avanzamento === "string") {
+        try {
+          statiAvanzamento = JSON.parse(commessa.stati_avanzamento);
+        } catch (err) {
+          console.error(`Errore nel parsing degli stati_avanzamento per la commessa ${commessa.id}:`, err);
+          continue; // Passa alla prossima commessa
+        }
+      } else if (Array.isArray(commessa.stati_avanzamento)) {
+        statiAvanzamento = commessa.stati_avanzamento;
+      } else {
+        statiAvanzamento = [];
+      }
+
+      // Filtra gli stati obsoleti
+      statiAvanzamento = statiAvanzamento.filter((stato) =>
+        statiPerReparto.some(
+          (s) => s.stato_id === stato.stato_id && s.reparto_id === stato.reparto_id
+        )
+      );
+
+      // Aggiorna i nomi degli stati e rimuovi duplicati
+      statiAvanzamento = statiAvanzamento.map((stato) => {
+        const statoValido = statiPerReparto.find(
+          (s) => s.stato_id === stato.stato_id && s.reparto_id === stato.reparto_id
+        );
+        return {
+          ...stato,
+          nome_stato: statoValido ? statoValido.nome_stato : stato.nome_stato, // Aggiorna il nome
+          ordine: statoValido ? statoValido.ordine : stato.ordine, // Aggiorna l'ordine
+        };
+      });
+
+      // Verifica che ci sia almeno uno stato attivo per ogni reparto
+      const repartiPresenti = [...new Set(statiAvanzamento.map((s) => s.reparto_id))];
+      for (const repartoId of repartiPresenti) {
+        const statiReparto = statiAvanzamento.filter((s) => s.reparto_id === repartoId);
+
+        // Se nessuno stato è attivo, attiva quello con l'ordine più basso
+        if (!statiReparto.some((s) => s.isActive)) {
+          const statoDaAttivare = statiReparto.sort((a, b) => a.ordine - b.ordine)[0];
+          if (statoDaAttivare) {
+            statoDaAttivare.isActive = true;
+          }
+        }
+      }
+
+      // Aggiorna la commessa nel database
+      const statiAggiornatiJson = JSON.stringify(statiAvanzamento);
+      await db.query(`UPDATE commesse SET stati_avanzamento = ? WHERE id = ?`, [
+        statiAggiornatiJson,
+        commessa.id,
+      ]);
+    }
+
+    res.status(200).send("Allineamento degli stati avanzamento completato.");
+  } catch (err) {
+    console.error("Errore durante l'allineamento degli stati avanzamento:", err);
+    res.status(500).send("Errore durante l'allineamento degli stati avanzamento.");
+  }
+});
+
+
 
 module.exports = router;

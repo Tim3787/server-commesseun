@@ -64,21 +64,7 @@ router.post("/", getUserIdFromToken, async (req, res) => {
       "INSERT INTO notifications (user_id, message) VALUES (?, ?)",
       [userId, message]
     );
-
-    // Invia la notifica push tramite Firebase Cloud Messaging (FCM)
-    if (deviceToken) {
-      const fcmMessage = {
-        token: deviceToken, // Token del dispositivo
-        notification: {
-          title: "Nuova Notifica",
-          body: message,
-        },
-      };
-
-      await admin.messaging().send(fcmMessage);
-      console.log("Notifica push inviata con successo.");
-    }
-    res.status(201).send("otifica creata e push inviata con successo.");
+    res.status(201).send("Notifica creata con successo.");
   } catch (err) {
     console.error("Errore durante la creazione della notifica:", err);
     res.status(500).send("Errore durante la creazione della notifica.");

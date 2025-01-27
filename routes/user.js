@@ -322,5 +322,25 @@ router.put("/:id/assign-resource", async (req, res) => {
   }
 });
 
+// Salva o aggiorna il token del dispositivo
+router.post("/update-device-token", authenticateToken, async (req, res) => {
+  const userId = req.user.id; // Ottieni l'ID utente dal token JWT
+  const { deviceToken } = req.body;
+
+  if (!deviceToken) {
+    return res.status(400).send("Il token del dispositivo è obbligatorio.");
+  }
+
+  try {
+    await db.query("UPDATE users SET device_token = ? WHERE id = ?", [
+      deviceToken,
+      userId,
+    ]);
+    res.status(200).send("Token del dispositivo aggiornato con successo.");
+  } catch (error) {
+    console.error("Errore durante l'aggiornamento del token del dispositivo:", error);
+    res.status(500).send("Errore durante l'aggiornamento del token del dispositivo.");
+  }
+});
 
 module.exports = router;

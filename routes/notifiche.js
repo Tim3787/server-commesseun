@@ -87,6 +87,7 @@ router.delete("/:id", async (req, res) => {
 
 
 
+
 router.put("/:id/stato", getUserIdFromToken, async (req, res) => {
   const { id } = req.params; // Ottieni l'id dal parametro della richiesta
   const { stato } = req.body; // Stato richiesto: 1 = iniziata, 2 = completata
@@ -96,16 +97,15 @@ router.put("/:id/stato", getUserIdFromToken, async (req, res) => {
   }
 
   try {
-    // Recupera i dettagli dell'attività, incluso il token FCM dell'utente associato
+    // Recupera i dettagli dell'attività
     const [activity] = await db.query(`
       SELECT 
         ac.id, ac.commessa_id, ac.risorsa_id, ac.attivita_id,
-        c.numero_commessa, ad.nome_attivita, r.reparto_id, u.fcm_token
+        c.numero_commessa, ad.nome_attivita, r.reparto_id
       FROM attivita_commessa ac
       JOIN commesse c ON ac.commessa_id = c.id
       JOIN attivita ad ON ac.attivita_id = ad.id
       JOIN risorse r ON ac.risorsa_id = r.id
-      JOIN users u ON r.id = u.risorsa_id
       WHERE ac.id = ?
     `, [id]);
 
@@ -117,7 +117,6 @@ router.put("/:id/stato", getUserIdFromToken, async (req, res) => {
     const tipoAttivita = activity[0].nome_attivita;
     const repartoId = activity[0].reparto_id;
     const risorsaId = activity[0].risorsa_id;
-    const fcmToken = activity[0].fcm_token; // Token FCM dell'utente associato
 
     // Aggiorna lo stato dell'attività
     const [result] = await db.query(
@@ -151,38 +150,12 @@ router.put("/:id/stato", getUserIdFromToken, async (req, res) => {
       );
     }
 
-    // Invia una notifica push se il token FCM è presente
-    if (fcmToken) {
-      const notificationPayload = {
-        token: fcmToken,
-        notification: {
-          title: "Aggiornamento attività",
-          body: `L'attività è stata aggiornata: 
-            - Commessa: ${numeroCommessa}
-            - Tipo: ${tipoAttivita}
-            - Stato: ${stato === 1 ? "Iniziata" : "Completata"}.`,
-        },
-        data: {
-          activityId: id.toString(),
-          stato: stato.toString(),
-        },
-      };
-
-      try {
-        await admin.messaging().send(notificationPayload);
-        console.log("Notifica push inviata con successo.");
-      } catch (err) {
-        console.error("Errore durante l'invio della notifica push:", err);
-      }
-    }
-
     res.status(200).send("Stato dell'attività aggiornato con successo e notifica inviata.");
   } catch (err) {
     console.error("Errore durante l'aggiornamento dello stato dell'attività:", err);
     res.status(500).send("Errore durante l'aggiornamento dello stato dell'attività.");
   }
 });
-
 
 
 

@@ -242,18 +242,22 @@ router.put("/:id", async (req, res) => {
   const { id } = req.params;
   const { username, email, role_id, risorsa_id } = req.body;
 
+  console.log("ID ricevuto:", id);
+  console.log("Body ricevuto:", req.body);
+
   if (!username || !email) {
     return res.status(400).send("Username ed email sono obbligatori.");
   }
 
   try {
-    // Recupera l'utente attuale per ottenere il valore di risorsa_id se non è stato inviato
     const [currentUser] = await db.query("SELECT risorsa_id FROM users WHERE id = ?", [id]);
     if (currentUser.length === 0) {
+      console.log("Utente non trovato nel database.");
       return res.status(404).send("Utente non trovato.");
     }
 
     const currentRisorsaId = risorsa_id !== undefined ? risorsa_id : currentUser[0].risorsa_id;
+    console.log("Risorsa attuale:", currentRisorsaId);
 
     const sql = `
       UPDATE users 
@@ -262,6 +266,7 @@ router.put("/:id", async (req, res) => {
     `;
 
     const [result] = await db.query(sql, [username, email, role_id, currentRisorsaId, id]);
+    console.log("Risultato aggiornamento:", result);
 
     if (result.affectedRows === 0) {
       return res.status(404).send("Utente non trovato.");
@@ -273,6 +278,7 @@ router.put("/:id", async (req, res) => {
     res.status(500).send("Errore durante l'aggiornamento dell'utente.");
   }
 });
+
 
 
 router.get("/dashboard", authenticateToken, async (req, res) => {

@@ -86,14 +86,14 @@ router.delete("/:id", async (req, res) => {
 
 
 // PUT: Aggiorna solo le note
-app.put("/:id/note", async (req, res) => {
-  const { id } = req.params;
+router.put("/:id/note", getUserIdFromToken, async (req, res) => {
+  const { id } = req.params; 
   const { note } = req.body;
 
   try {
     const [result] = await db.query(
       "UPDATE attivita_commessa SET note = ? WHERE id = ?",
-      [note || null, activityId]
+      [note || null, id]
     );
 
     if (result.affectedRows === 0) {

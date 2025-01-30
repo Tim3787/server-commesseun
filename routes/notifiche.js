@@ -87,7 +87,7 @@ router.delete("/:id", async (req, res) => {
 
 // PUT: Aggiorna solo le note
 app.put("/:id/note", async (req, res) => {
-  const { activityId } = req.params;
+  const { id } = req.params;
   const { note } = req.body;
 
   try {

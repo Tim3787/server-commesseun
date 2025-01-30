@@ -194,18 +194,23 @@ router.delete("/:id", async (req, res) => {
   const { id } = req.params;
 
   try {
+    // Elimina tutte le notifiche associate all'utente
+    await db.query("DELETE FROM notifications WHERE user_id = ?", [id]);
+
+    // Elimina l'utente
     const [result] = await db.query("DELETE FROM users WHERE id = ?", [id]);
 
     if (result.affectedRows === 0) {
       return res.status(404).send("Utente non trovato.");
     }
 
-    res.send("Utente eliminato con successo!");
+    res.send("Utente e relative notifiche eliminati con successo!");
   } catch (error) {
     console.error("Errore durante l'eliminazione dell'utente:", error);
     res.status(500).send("Errore durante l'eliminazione dell'utente.");
   }
 });
+
 
 // Rotta per ottenere utenti
 router.get("/", async (req, res) => {

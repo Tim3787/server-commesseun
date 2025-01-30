@@ -85,6 +85,27 @@ router.delete("/:id", async (req, res) => {
 });
 
 
+// PUT: Aggiorna solo le note
+app.put("/:id/note", async (req, res) => {
+  const { activityId } = req.params;
+  const { note } = req.body;
+
+  try {
+    const [result] = await db.query(
+      "UPDATE attivita_commessa SET note = ? WHERE id = ?",
+      [note || null, activityId]
+    );
+
+    if (result.affectedRows === 0) {
+      return res.status(404).send("Attività non trovata.");
+    }
+
+    res.status(200).json({ message: "Note aggiornate con successo" });
+  } catch (error) {
+    console.error("Errore durante l'aggiornamento delle note:", error);
+    res.status(500).json({ error: "Errore interno del server" });
+  }
+});
 
 
 

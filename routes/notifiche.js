@@ -90,17 +90,15 @@ router.put("/:id/note", getUserIdFromToken, async (req, res) => {
   const { id } = req.params; 
   const { note } = req.body;
 
+  console.log("ID ricevuto:", id);
+  console.log("Nota ricevuta:", note);
+
   try {
     const [result] = await db.query(
       "UPDATE attivita_commessa SET note = ? WHERE id = ?",
       [note || null, id]
     );
-
-    if (result.affectedRows === 0) {
-      return res.status(404).send("Attività non trovata.");
-    }
-
-    res.status(200).json({ message: "Note aggiornate con successo" });
+    // ...
   } catch (error) {
     console.error("Errore durante l'aggiornamento delle note:", error);
     res.status(500).json({ error: "Errore interno del server" });

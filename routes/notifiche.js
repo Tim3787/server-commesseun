@@ -98,12 +98,19 @@ router.put("/:id/note", getUserIdFromToken, async (req, res) => {
       "UPDATE attivita_commessa SET note = ? WHERE id = ?",
       [note || null, id]
     );
-    // ...
+
+    if (result.affectedRows === 0) {
+      return res.status(404).send("Attività non trovata.");
+    }
+
+    console.log("Aggiornamento riuscito, invio risposta al client.");
+    res.status(200).json({ message: "Note aggiornate con successo" });
   } catch (error) {
     console.error("Errore durante l'aggiornamento delle note:", error);
     res.status(500).json({ error: "Errore interno del server" });
   }
 });
+
 
 
 

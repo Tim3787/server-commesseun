@@ -21,7 +21,8 @@ router.get("/", async (req, res) => {
   ac.data_inizio, 
   ac.durata,
   ac.stato,
-  ac.descrizione AS descrizione_attivita
+  ac.descrizione AS descrizione_attivita,
+   ac.note 
 FROM attivita_commessa ac
 JOIN commesse c ON ac.commessa_id = c.id
 LEFT JOIN risorse r ON ac.risorsa_id = r.id

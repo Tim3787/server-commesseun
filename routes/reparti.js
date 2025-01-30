@@ -43,4 +43,21 @@ router.delete("/:id", async (req, res) => {
   }
 });
 
+router.put("/api/reparti/:id", async (req, res) => {
+  const { id } = req.params;
+  const { nome } = req.body;
+
+  if (!nome) {
+    return res.status(400).send("Il nome del reparto è obbligatorio.");
+  }
+
+  try {
+    await db.query("UPDATE reparti SET nome = ? WHERE id = ?", [nome, id]);
+    res.status(200).send("Reparto aggiornato con successo!");
+  } catch (error) {
+    console.error("Errore durante l'aggiornamento del reparto:", error);
+    res.status(500).send("Errore durante l'aggiornamento del reparto.");
+  }
+});
+
 module.exports = router;

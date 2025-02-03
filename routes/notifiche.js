@@ -2,6 +2,7 @@ const express = require("express");
 const router = express.Router();
 const db = require("../config/db");
 const jwt = require("jsonwebtoken");
+const sendNotification = require("./sendNotification");
 
 // Middleware per ottenere l'id utente dal token
 const getUserIdFromToken = (req, res, next) => {
@@ -64,6 +65,7 @@ router.post("/", getUserIdFromToken, async (req, res) => {
       "INSERT INTO notifications (user_id, message) VALUES (?, ?)",
       [userId, message]
     );
+    await sendPushNotification(userId, message);
     res.status(201).send("Notifica creata con successo.");
   } catch (err) {
     console.error("Errore durante la creazione della notifica:", err);
@@ -227,5 +229,7 @@ router.get("/unread", getUserIdFromToken, async (req, res) => {
     res.status(500).send("Errore durante il recupero delle notifiche non lette.");
   }
 });
+
+
 
 module.exports = router;

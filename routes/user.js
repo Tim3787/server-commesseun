@@ -333,5 +333,43 @@ router.put("/:id/assign-resource", async (req, res) => {
   }
 });
 
+// Middleware per ottenere l'id utente dal token JWT
+const getUserIdFromToken = (req, res, next) => {
+  const authHeader = req.headers["authorization"];
+  if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    return res.status(401).send("Accesso negato. Nessun token fornito.");
+  }
+
+  const token = authHeader.split(" ")[1];
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    req.userId = decoded.id; // Salva l'id utente decodificato nella richiesta
+    next();
+  } catch (err) {
+    res.status(403).send("Token non valido.");
+  }
+};
+
+// Endpoint per salvare il token dispositivo
+router.post("/device-token", getUserIdFromToken, async (req, res) => {
+  const userId = req.userId;
+  const { token } = req.body;
+
+  if (!token) {
+    return res.status(400).send("Token dispositivo mancante.");
+  }
+
+  try {
+    await db.query(
+      "UPDATE users SET device_token = ? WHERE id = ?",
+      [token, userId]
+    );
+    res.status(200).send("Token dispositivo salvato con successo.");
+  } catch (err) {
+    console.error("Errore durante il salvataggio del token dispositivo:", err);
+    res.status(500).send("Errore durante il salvataggio del token.");
+  }
+});
+
 
 module.exports = router;

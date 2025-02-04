@@ -61,17 +61,31 @@ router.post("/", getUserIdFromToken, async (req, res) => {
   const { message } = req.body;
 
   try {
-    await db.query(
-      "INSERT INTO notifications (user_id, message) VALUES (?, ?)",
-      [userId, message]
-    );
-    await sendPushNotification(userId, message);
-    res.status(201).send("Notifica creata con successo.");
+    // Recupera il device_token associato all'utente
+    const [user] = await db.query("SELECT device_token FROM users WHERE id = ?", [userId]);
+
+    if (user.length === 0 || !user[0].device_token) {
+      console.log("Nessun dispositivo registrato per l'utente:", userId);
+      return res.status(400).send("Nessun dispositivo registrato per l'utente.");
+    }
+
+    const deviceToken = user[0].device_token;
+
+    // Inserisci la notifica nel database
+    await db.query("INSERT INTO notifications (user_id, message) VALUES (?, ?)", [userId, message]);
+    console.log("Notifica salvata nel database per l'utente:", userId);
+
+    // Invia la notifica push
+    await sendNotification(deviceToken, "Nuova Notifica", message);
+    console.log("Notifica push inviata con successo.");
+
+    res.status(201).send("Notifica creata e inviata con successo.");
   } catch (err) {
-    console.error("Errore durante la creazione della notifica:", err);
-    res.status(500).send("Errore durante la creazione della notifica.");
+    console.error("Errore durante la creazione e invio della notifica:", err);
+    res.status(500).send("Errore durante la creazione e invio della notifica.");
   }
 });
+
 
 // Elimina una notifica
 router.delete("/:id", async (req, res) => {

@@ -93,6 +93,7 @@ router.post("/register", async (req, res) => {
   }
 });
 
+
 // Rotta di login
 router.post("/login", async (req, res) => {
   const { username, password } = req.body;
@@ -102,49 +103,56 @@ router.post("/login", async (req, res) => {
   }
 
   try {
-    const [rows] = await db.query("SELECT * FROM users WHERE username = ?", [
-      username,
-    ]);
+    const [rows] = await db.query("SELECT * FROM users WHERE username = ?", [username]);
 
     if (rows.length === 0) {
       return res.status(401).send("Credenziali non valide.");
     }
 
-    const user = rows[0]; // Ottieni il primo utente trovato
+    const user = rows[0];
 
     const passwordMatch = await bcrypt.compare(password, user.password);
     if (!passwordMatch) {
       return res.status(401).send("Credenziali non valide.");
     }
 
-    const token = jwt.sign({ id: user.id, role_id: user.role_id }, process.env.JWT_SECRET, {
-      expiresIn: "8h",
+    const token = jwt.sign({ id: user.id }, process.env.JWT_SECRET, {
+      expiresIn: "1h",
+    });
+    
+
+    const refreshToken = jwt.sign({ id: user.id }, process.env.REFRESH_TOKEN_SECRET, {
+      expiresIn: "7d",
     });
 
-       // Genera il token di refresh
-       const refreshToken = jwt.sign({ id: user.id }, process.env.REFRESH_TOKEN_SECRET, {
-        expiresIn: "7d",
-      });
-// Salva il refresh token nel database
-await db.query("UPDATE users SET refresh_token = ? WHERE id = ?", [refreshToken, user.id]);
-      
-    res.json({ token, refreshToken, role_id: user.role_id });
+    // Salva il refresh token nel database
+    await db.query("UPDATE users SET refresh_token = ? WHERE id = ?", [refreshToken, user.id]);
+
+    // Imposta il refresh token come cookie HTTP-only
+    res.cookie("refreshToken", refreshToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "strict",
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 giorni
+    });
+
+    res.json({ token, role_id: user.role_id }); // Ritorna solo l'access token
   } catch (error) {
     console.error("Errore nel login:", error);
     res.status(500).send("Errore nel login.");
   }
 });
+
+
 router.post("/refresh-token", async (req, res) => {
-  const { refreshToken } = req.body;
+  const refreshToken = req.cookies.refreshToken; // Ottieni il token dal cookie
   if (!refreshToken) {
     return res.status(400).send("Token di refresh mancante.");
   }
 
   try {
-    // Verifica il token di refresh
     const decoded = jwt.verify(refreshToken, process.env.REFRESH_TOKEN_SECRET);
 
-    // Controlla se il refresh token è ancora valido nel database
     const [rows] = await db.query("SELECT * FROM users WHERE id = ? AND refresh_token = ?", [
       decoded.id,
       refreshToken,
@@ -154,7 +162,6 @@ router.post("/refresh-token", async (req, res) => {
       return res.status(401).send("Token di refresh non valido.");
     }
 
-    // Genera un nuovo access token
     const newAccessToken = jwt.sign({ id: decoded.id, role_id: rows[0].role_id }, process.env.JWT_SECRET, {
       expiresIn: "1h",
     });
@@ -163,6 +170,30 @@ router.post("/refresh-token", async (req, res) => {
   } catch (err) {
     console.error("Errore durante il refresh del token:", err);
     return res.status(403).send("Token di refresh non valido o scaduto.");
+  }
+});
+
+
+router.post("/logout", async (req, res) => {
+  const refreshToken = req.cookies.refreshToken;
+  if (!refreshToken) {
+    return res.status(400).send("Token di refresh mancante.");
+  }
+
+  try {
+    await db.query("UPDATE users SET refresh_token = NULL WHERE refresh_token = ?", [refreshToken]);
+
+    // Rimuovi il cookie
+    res.clearCookie("refreshToken", {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "strict",
+    });
+
+    res.status(200).send("Logout effettuato con successo.");
+  } catch (err) {
+    console.error("Errore durante il logout:", err);
+    res.status(500).send("Errore durante il logout.");
   }
 });
 
@@ -202,6 +233,7 @@ router.post("/forgot-password", async (req, res) => {
     });
 
     const resetLink = `http://localhost:3000/reset-password?token=${resetToken}`;
+
     await transporter.sendMail({
       to: email,
       subject: "Recupero Password",

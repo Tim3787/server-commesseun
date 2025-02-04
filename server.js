@@ -15,7 +15,7 @@ const statiAvanzamentoRoutes = require("./routes/stati-avanzamento");
 const commessaStatiRoutes = require("./routes/stati-avanzamento");
 const notificheRoutes = require("./routes/notifiche");
 const statoCommessaRoutes  = require("./routes/stato-commessa.js");
-const PrenotazioneSaleRoutes  = require("./routes/sale-riunoni.js");
+const PrenotazioneSaleRoutes  = require("./routes/sale-riunioni.js");
 
 const app = express();
 const cookieParser = require("cookie-parser");

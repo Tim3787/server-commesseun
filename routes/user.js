@@ -5,7 +5,8 @@ const crypto = require("crypto");
 const nodemailer = require("nodemailer");
 const db = require("../config/db");
 const router = express.Router();
-
+console.log("JWT_SECRET:", process.env.JWT_SECRET);
+console.log("REFRESH_TOKEN_SECRET:", process.env.REFRESH_TOKEN_SECRET);
 
 
 const authenticateToken = (req, res, next) => {

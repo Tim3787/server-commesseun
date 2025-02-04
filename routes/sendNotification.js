@@ -26,14 +26,6 @@ const sendNotification = async (deviceToken, title, body) => {
   }
 };
 
-const sendNotification = require("./sendNotification");
-
-sendNotification(
-  "d_Z9qYkTnVlmN0SeMist2v:APA91bH_zQRsD2ZWDXiRiemZn3Bfy5_SLDzfMJZd38swESdBFJJvKMGiKyMTxqUYCDADE1MkvMJBijDdmii01gyib-dauznxP3Iy5J2aNPu5bC8t_thXaCA", 
-  "Test Notifica", 
-  "Questa è una notifica di test."
-);
-
 
 
 module.exports = sendNotification;

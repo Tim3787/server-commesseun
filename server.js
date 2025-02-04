@@ -32,7 +32,11 @@ const connection = mysql.createConnection({
 
 // Middleware di sicurezza e configurazione
 app.use(helmet()); // Aggiunge intestazioni di sicurezza
-app.use(cors()); // Abilita le richieste cross-origin
+
+app.use(cors({
+  origin: "http://localhost:3000",  // Sostituisci con il dominio del client
+  credentials: true,                // Consenti l'invio delle credenziali (cookie, ecc.)
+}));
 app.use(bodyParser.json()); // Gestisce le richieste JSON
 app.use(bodyParser.urlencoded({ extended: true })); // Gestisce i dati URL-encoded
 

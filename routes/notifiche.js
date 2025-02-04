@@ -113,18 +113,21 @@ router.put("/:id/note", getUserIdFromToken, async (req, res) => {
   }
 });
 
-
-
 router.put("/:id/stato", getUserIdFromToken, async (req, res) => {
-  const { id } = req.params; // Ottieni l'id dal parametro della richiesta
-  const { stato } = req.body; // Stato richiesto: 1 = iniziata, 2 = completata
+  console.log("Inizio endpoint PUT /:id/stato");
+
+  const { id } = req.params;
+  const { stato } = req.body;
+
+  console.log("ID attività:", id);
+  console.log("Stato ricevuto:", stato);
 
   if (stato === undefined) {
+    console.error("Campo stato mancante.");
     return res.status(400).send("Il campo 'stato' è obbligatorio.");
   }
 
   try {
-    // Recupera i dettagli dell'attività
     const [activity] = await db.query(`
       SELECT 
         ac.id, ac.commessa_id, ac.risorsa_id, ac.attivita_id,
@@ -133,19 +136,21 @@ router.put("/:id/stato", getUserIdFromToken, async (req, res) => {
       JOIN commesse c ON ac.commessa_id = c.id
       JOIN attivita ad ON ac.attivita_id = ad.id
       JOIN risorse r ON ac.risorsa_id = r.id
-      LEFT JOIN users u ON u.id = ac.risorsa_id  -- Associa l'utente per ottenere il token
+      LEFT JOIN users u ON u.id = ac.risorsa_id
       WHERE ac.id = ?
     `, [id]);
 
     if (activity.length === 0) {
+      console.error("Attività non trovata.");
       return res.status(404).send("Attività non trovata.");
     }
 
     const numeroCommessa = activity[0].numero_commessa;
     const tipoAttivita = activity[0].nome_attivita;
     const repartoId = activity[0].reparto_id;
-    const risorsaId = activity[0].risorsa_id;
     const deviceToken = activity[0].device_token;
+
+    console.log("Dati attività recuperati:", activity[0]);
 
     // Aggiorna lo stato dell'attività
     const [result] = await db.query(
@@ -154,6 +159,7 @@ router.put("/:id/stato", getUserIdFromToken, async (req, res) => {
     );
 
     if (result.affectedRows === 0) {
+      console.error("Nessuna riga aggiornata.");
       return res.status(404).send("Attività non trovata.");
     }
 
@@ -161,7 +167,9 @@ router.put("/:id/stato", getUserIdFromToken, async (req, res) => {
     if (deviceToken) {
       const message = `Lo stato dell'attività ${tipoAttivita} della commessa ${numeroCommessa} è stato aggiornato a ${
         stato === 1 ? "Iniziata" : "Completata"
-      }.`;
+      }.`; 
+
+      console.log("Inviando notifica:", message);
 
       // Invoca la funzione per inviare la notifica
       await sendNotification(deviceToken, "Aggiornamento attività", message);
@@ -176,6 +184,7 @@ router.put("/:id/stato", getUserIdFromToken, async (req, res) => {
     res.status(500).send("Errore durante l'aggiornamento dello stato dell'attività.");
   }
 });
+
 
 
 

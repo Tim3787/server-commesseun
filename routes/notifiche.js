@@ -115,7 +115,6 @@ router.put("/:id/note", getUserIdFromToken, async (req, res) => {
 
 
 
-
 router.put("/:id/stato", getUserIdFromToken, async (req, res) => {
   const { id } = req.params; // Ottieni l'id dal parametro della richiesta
   const { stato } = req.body; // Stato richiesto: 1 = iniziata, 2 = completata
@@ -129,11 +128,12 @@ router.put("/:id/stato", getUserIdFromToken, async (req, res) => {
     const [activity] = await db.query(`
       SELECT 
         ac.id, ac.commessa_id, ac.risorsa_id, ac.attivita_id,
-        c.numero_commessa, ad.nome_attivita, r.reparto_id
+        c.numero_commessa, ad.nome_attivita, r.reparto_id, u.device_token
       FROM attivita_commessa ac
       JOIN commesse c ON ac.commessa_id = c.id
       JOIN attivita ad ON ac.attivita_id = ad.id
       JOIN risorse r ON ac.risorsa_id = r.id
+      LEFT JOIN users u ON u.id = ac.risorsa_id  -- Associa l'utente per ottenere il token
       WHERE ac.id = ?
     `, [id]);
 
@@ -145,6 +145,7 @@ router.put("/:id/stato", getUserIdFromToken, async (req, res) => {
     const tipoAttivita = activity[0].nome_attivita;
     const repartoId = activity[0].reparto_id;
     const risorsaId = activity[0].risorsa_id;
+    const deviceToken = activity[0].device_token;
 
     // Aggiorna lo stato dell'attività
     const [result] = await db.query(
@@ -156,29 +157,20 @@ router.put("/:id/stato", getUserIdFromToken, async (req, res) => {
       return res.status(404).send("Attività non trovata.");
     }
 
-    // Determina l'utente da notificare
-    let userIdToNotify = null;
-    if (repartoId === 1) {
-      // Reparto software
-      userIdToNotify = 26; // ID utente per il reparto software
-    } else if (repartoId === 2) {
-      // Reparto elettrico
-      userIdToNotify = 44; // ID utente per il reparto elettrico
+    // Invia notifica solo se il dispositivo è registrato
+    if (deviceToken) {
+      const message = `Lo stato dell'attività ${tipoAttivita} della commessa ${numeroCommessa} è stato aggiornato a ${
+        stato === 1 ? "Iniziata" : "Completata"
+      }.`;
+
+      // Invoca la funzione per inviare la notifica
+      await sendNotification(deviceToken, "Aggiornamento attività", message);
+      console.log("Notifica inviata con successo.");
+    } else {
+      console.log("Nessun dispositivo registrato per ricevere la notifica.");
     }
 
-    if (userIdToNotify) {
-      // Crea una notifica per il responsabile
-      const message = `Lo stato dell'attività è stato aggiornato:
-        - Commessa: ${numeroCommessa}
-        - Tipo attività: ${tipoAttivita}
-        - Nuovo stato: ${stato === 1 ? "Iniziata" : "Completata"}.`;
-      await db.query(
-        "INSERT INTO notifications (user_id, message) VALUES (?, ?)",
-        [userIdToNotify, message]
-      );
-    }
-
-    res.status(200).send("Stato dell'attività aggiornato con successo e notifica inviata.");
+    res.status(200).send("Stato dell'attività aggiornato con successo.");
   } catch (err) {
     console.error("Errore durante l'aggiornamento dello stato dell'attività:", err);
     res.status(500).send("Errore durante l'aggiornamento dello stato dell'attività.");

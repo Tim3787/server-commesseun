@@ -33,10 +33,12 @@ const connection = mysql.createConnection({
 // Middleware di sicurezza e configurazione
 app.use(helmet()); // Aggiunge intestazioni di sicurezza
 
-app.use(cors({
-  origin: "http://localhost:3000",  // Sostituisci con il dominio del client
-  credentials: true,                // Consenti l'invio delle credenziali (cookie, ecc.)
-}));
+const corsOptions = {
+  origin: ["http://localhost:3000", "https://commesseun.netlify.app"],  // Permetti sia localhost che Netlify
+  credentials: true,  // Necessario per i cookie HTTP-only
+};
+
+app.use(cors(corsOptions));
 app.use(bodyParser.json()); // Gestisce le richieste JSON
 app.use(bodyParser.urlencoded({ extended: true })); // Gestisce i dati URL-encoded
 

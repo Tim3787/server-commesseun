@@ -47,7 +47,7 @@ app.use("/api/stati-avanzamento", statiAvanzamentoRoutes);
 app.use("/api/commessa-stati", commessaStatiRoutes);
 app.use("/api/notifiche", notificheRoutes)
 app.use("/api/stato-commessa", statoCommessaRoutes);
-app.use("/api/sale-riunoni", PrenotazioneSaleRoutes);
+app.use("/api/sale-riunioni", PrenotazioneSaleRoutes);
 
 // Middleware di gestione degli errori
 app.use((err, req, res, next) => {

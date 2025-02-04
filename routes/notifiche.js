@@ -112,6 +112,8 @@ router.put("/:id/note", getUserIdFromToken, async (req, res) => {
     res.status(500).json({ error: "Errore interno del server" });
   }
 });
+
+
 router.put("/:id/stato", getUserIdFromToken, async (req, res) => {
   const { id } = req.params; // Ottieni l'id dal parametro della richiesta
   const { stato } = req.body; // Stato richiesto: 1 = iniziata, 2 = completata
@@ -153,13 +155,20 @@ router.put("/:id/stato", getUserIdFromToken, async (req, res) => {
     if (result.affectedRows === 0) {
       return res.status(404).send("Attività non trovata.");
     }
+    console.log("Risorsa ID per la query device_token:", risorsaId);
 
     // Recupera il device_token dall'utente usando risorsa_id
     const [user] = await db.query(
       "SELECT device_token FROM users WHERE risorsa_id = ?",
       [risorsaId]
     );
-
+    
+    if (user.length > 0) {
+      console.log("Device token recuperato dal database:", user[0].device_token);
+    } else {
+      console.log("Nessun utente trovato con il risorsa_id:", risorsaId);
+    }
+    
     if (user.length > 0 && user[0].device_token) {
       const deviceToken = user[0].device_token;
       const message = `Lo stato dell'attività ${tipoAttivita} della commessa ${numeroCommessa} è stato aggiornato a ${

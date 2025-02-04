@@ -11,7 +11,7 @@ console.log("REFRESH_TOKEN_SECRET:", process.env.REFRESH_TOKEN_SECRET);
 
 const authenticateToken = (req, res, next) => {
   const authHeader = req.headers["authorization"];
-  const token = authHeader && authHeader.split(" ")[1]; // "Bearer TOKEN"
+  const token = authHeader && authHeader.split(" ")[1]; 
 
   if (!authHeader || !authHeader.startsWith("Bearer ")) {
     console.error("Formato del token non valido o assente.");
@@ -21,13 +21,12 @@ const authenticateToken = (req, res, next) => {
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-    // Verifica dei campi richiesti
-    if (!decoded.id || !decoded.role_id) {
-      console.error("Token decodificato privo di campi obbligatori:", decoded);
+    // Non serve più verificare `role_id` se è stato aggiunto correttamente nel token
+    if (!decoded.id) {
+      console.error("Token decodificato privo dell'ID:", decoded);
       return res.status(403).send("Token non valido.");
     }
 
-    // Aggiungi le informazioni utente alla richiesta
     req.user = decoded;
     next();
   } catch (err) {
@@ -41,7 +40,6 @@ const authenticateToken = (req, res, next) => {
   }
 };
 
-module.exports = authenticateToken;
 
 
 // Middleware per ottenere l'id utente dal token JWT
@@ -117,32 +115,31 @@ router.post("/login", async (req, res) => {
       return res.status(401).send("Credenziali non valide.");
     }
 
-    const token = jwt.sign({ id: user.id }, process.env.JWT_SECRET, {
+    // Aggiungi `role_id` al token JWT
+    const token = jwt.sign({ id: user.id, role_id: user.role_id }, process.env.JWT_SECRET, {
       expiresIn: "1h",
     });
-    
 
     const refreshToken = jwt.sign({ id: user.id }, process.env.REFRESH_TOKEN_SECRET, {
       expiresIn: "7d",
     });
 
-    // Salva il refresh token nel database
     await db.query("UPDATE users SET refresh_token = ? WHERE id = ?", [refreshToken, user.id]);
 
-    // Imposta il refresh token come cookie HTTP-only
     res.cookie("refreshToken", refreshToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       sameSite: "strict",
-      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 giorni
+      maxAge: 7 * 24 * 60 * 60 * 1000,
     });
 
-    res.json({ token, role_id: user.role_id }); // Ritorna solo l'access token
+    res.json({ token, role_id: user.role_id });
   } catch (error) {
     console.error("Errore nel login:", error);
     res.status(500).send("Errore nel login.");
   }
 });
+
 
 
 router.post("/refresh-token", async (req, res) => {

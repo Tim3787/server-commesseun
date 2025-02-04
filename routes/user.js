@@ -43,6 +43,23 @@ const authenticateToken = (req, res, next) => {
 module.exports = authenticateToken;
 
 
+// Middleware per ottenere l'id utente dal token JWT
+const getUserIdFromToken = (req, res, next) => {
+  const authHeader = req.headers["authorization"];
+  if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    return res.status(401).send("Accesso negato. Nessun token fornito.");
+  }
+
+  const token = authHeader.split(" ")[1];
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    req.userId = decoded.id; // Salva l'id utente decodificato nella richiesta
+    next();
+  } catch (err) {
+    res.status(403).send("Token non valido.");
+  }
+};
+
 
 // Rotta di registrazione
 router.post("/register", async (req, res) => {
@@ -101,14 +118,55 @@ router.post("/login", async (req, res) => {
     }
 
     const token = jwt.sign({ id: user.id, role_id: user.role_id }, process.env.JWT_SECRET, {
-      expiresIn: "1h",
+      expiresIn: "8h",
     });
-    res.json({ token, role_id: user.role_id });
+
+       // Genera il token di refresh
+       const refreshToken = jwt.sign({ id: user.id }, process.env.REFRESH_TOKEN_SECRET, {
+        expiresIn: "7d",
+      });
+// Salva il refresh token nel database
+await db.query("UPDATE users SET refresh_token = ? WHERE id = ?", [refreshToken, user.id]);
+      
+    res.json({ token, refreshToken, role_id: user.role_id });
   } catch (error) {
     console.error("Errore nel login:", error);
     res.status(500).send("Errore nel login.");
   }
 });
+router.post("/refresh-token", async (req, res) => {
+  const { refreshToken } = req.body;
+  if (!refreshToken) {
+    return res.status(400).send("Token di refresh mancante.");
+  }
+
+  try {
+    // Verifica il token di refresh
+    const decoded = jwt.verify(refreshToken, process.env.REFRESH_TOKEN_SECRET);
+
+    // Controlla se il refresh token è ancora valido nel database
+    const [rows] = await db.query("SELECT * FROM users WHERE id = ? AND refresh_token = ?", [
+      decoded.id,
+      refreshToken,
+    ]);
+
+    if (rows.length === 0) {
+      return res.status(401).send("Token di refresh non valido.");
+    }
+
+    // Genera un nuovo access token
+    const newAccessToken = jwt.sign({ id: decoded.id, role_id: rows[0].role_id }, process.env.JWT_SECRET, {
+      expiresIn: "1h",
+    });
+
+    res.json({ accessToken: newAccessToken });
+  } catch (err) {
+    console.error("Errore durante il refresh del token:", err);
+    return res.status(403).send("Token di refresh non valido o scaduto.");
+  }
+});
+
+
 
 // Rotta per il recupero password
 router.post("/forgot-password", async (req, res) => {
@@ -333,22 +391,6 @@ router.put("/:id/assign-resource", async (req, res) => {
   }
 });
 
-// Middleware per ottenere l'id utente dal token JWT
-const getUserIdFromToken = (req, res, next) => {
-  const authHeader = req.headers["authorization"];
-  if (!authHeader || !authHeader.startsWith("Bearer ")) {
-    return res.status(401).send("Accesso negato. Nessun token fornito.");
-  }
-
-  const token = authHeader.split(" ")[1];
-  try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    req.userId = decoded.id; // Salva l'id utente decodificato nella richiesta
-    next();
-  } catch (err) {
-    res.status(403).send("Token non valido.");
-  }
-};
 
 // Endpoint per salvare il token dispositivo
 router.post("/device-token", getUserIdFromToken, async (req, res) => {
@@ -360,10 +402,22 @@ router.post("/device-token", getUserIdFromToken, async (req, res) => {
   }
 
   try {
+    // Verifica se il token è già presente
+    const [existingToken] = await db.query(
+      "SELECT device_token FROM users WHERE id = ?",
+      [userId]
+    );
+
+    if (existingToken.length > 0 && existingToken[0].device_token === token) {
+      return res.status(200).send("Il token dispositivo è già registrato.");
+    }
+
+    // Aggiorna il token solo se è diverso
     await db.query(
       "UPDATE users SET device_token = ? WHERE id = ?",
       [token, userId]
     );
+
     res.status(200).send("Token dispositivo salvato con successo.");
   } catch (err) {
     console.error("Errore durante il salvataggio del token dispositivo:", err);

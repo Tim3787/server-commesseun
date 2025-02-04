@@ -15,8 +15,11 @@ const statiAvanzamentoRoutes = require("./routes/stati-avanzamento");
 const commessaStatiRoutes = require("./routes/stati-avanzamento");
 const notificheRoutes = require("./routes/notifiche");
 const statoCommessaRoutes  = require("./routes/stato-commessa.js");
+const PrenotazioneSaleRoutes  = require("./routes/sale-riunoni.js");
 
 const app = express();
+const cookieParser = require("cookie-parser");
+app.use(cookieParser());
 
 
 // Connessione al database MySQL con variabili d'ambiente
@@ -44,6 +47,7 @@ app.use("/api/stati-avanzamento", statiAvanzamentoRoutes);
 app.use("/api/commessa-stati", commessaStatiRoutes);
 app.use("/api/notifiche", notificheRoutes)
 app.use("/api/stato-commessa", statoCommessaRoutes);
+app.use("/api/sale-riunoni", PrenotazioneSaleRoutes);
 
 // Middleware di gestione degli errori
 app.use((err, req, res, next) => {
@@ -57,6 +61,7 @@ app.use((err, req, res, next) => {
 const PORT = process.env.PORT || 5000; // Usa variabile d'ambiente PORT, se disponibile
 app.listen(PORT, () => {
   console.log(`Server in esecuzione sulla porta ${PORT}`);
+
 });
 
 connection.connect((err) => {

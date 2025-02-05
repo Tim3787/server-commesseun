@@ -208,6 +208,7 @@ router.put('/:id/ordine', async (req, res) => {
 });
 
 
+
 //Ordina stati avanzamento per reparto
 router.put("/:id/reparti/:repartoId/ordina-stati", async (req, res) => {
   const { id, repartoId } = req.params;
@@ -228,6 +229,7 @@ router.put("/:id/reparti/:repartoId/ordina-stati", async (req, res) => {
     res.status(500).send("Errore durante l'aggiornamento dell'ordine.");
   }
 });
+
 
 
 module.exports = router;

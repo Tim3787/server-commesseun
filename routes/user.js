@@ -132,7 +132,7 @@ router.post("/login", async (req, res) => {
       sameSite: "strict",
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });
-
+    console.log("Cookie impostato correttamente");
     res.json({ token, role_id: user.role_id });
   } catch (error) {
     console.error("Errore nel login:", error);
@@ -174,20 +174,14 @@ router.post("/refresh-token", async (req, res) => {
 
 router.post("/logout", async (req, res) => {
   const refreshToken = req.cookies.refreshToken;
+  console.log("Cookie refreshToken:", req.cookies.refreshToken);
   if (!refreshToken) {
     return res.status(400).send("Token di refresh mancante.");
   }
 
   try {
     await db.query("UPDATE users SET refresh_token = NULL WHERE refresh_token = ?", [refreshToken]);
-
-    // Rimuovi il cookie
-    res.clearCookie("refreshToken", {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "strict",
-    });
-
+    res.clearCookie("refreshToken");
     res.status(200).send("Logout effettuato con successo.");
   } catch (err) {
     console.error("Errore durante il logout:", err);

@@ -93,9 +93,10 @@ router.post("/register", async (req, res) => {
 });
 
 
-// Rotta di login
 router.post("/login", async (req, res) => {
   const { username, password } = req.body;
+
+  console.log("Dati ricevuti nel login:", req.body);  // Logga i dati ricevuti
 
   if (!username || !password) {
     return res.status(400).send("Tutti i campi sono obbligatori.");
@@ -103,6 +104,7 @@ router.post("/login", async (req, res) => {
 
   try {
     const [rows] = await db.query("SELECT * FROM users WHERE username = ?", [username]);
+    console.log("Risultato query utente:", rows);  // Logga il risultato della query
 
     if (rows.length === 0) {
       return res.status(401).send("Credenziali non valide.");
@@ -111,11 +113,12 @@ router.post("/login", async (req, res) => {
     const user = rows[0];
 
     const passwordMatch = await bcrypt.compare(password, user.password);
+    console.log("Confronto password:", passwordMatch);  // Logga il confronto delle password
+
     if (!passwordMatch) {
       return res.status(401).send("Credenziali non valide.");
     }
 
-    // Aggiungi `role_id` al token JWT
     const token = jwt.sign({ id: user.id, role_id: user.role_id }, process.env.JWT_SECRET, {
       expiresIn: "1h",
     });
@@ -132,13 +135,15 @@ router.post("/login", async (req, res) => {
       sameSite: "strict",
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });
-    console.log("Cookie impostato correttamente");
+
+    console.log("Login riuscito, token generato.");
     res.json({ token, role_id: user.role_id });
   } catch (error) {
     console.error("Errore nel login:", error);
     res.status(500).send("Errore nel login.");
   }
 });
+
 
 
 

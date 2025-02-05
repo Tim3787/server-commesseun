@@ -175,22 +175,38 @@ router.delete("/:id", async (req, res) => {
 });
 
 //Aggiorna l'ordine degli stati di avanzamento
-router.put("/stati-avanzamento/:id/ordine", async (req, res) => {
+router.put('/:id/ordine', async (req, res) => {
   const { id } = req.params;
-  const { ordine } = req.body;
+  const { nuovoOrdine, repartoId } = req.body;
 
-  if (ordine == null) {
-    return res.status(400).send("Il campo 'ordine' è obbligatorio.");
+  if (!nuovoOrdine || !repartoId) {
+    return res.status(400).send('Reparto e ordine sono obbligatori.');
   }
 
   try {
-    await db.query("UPDATE stati_avanzamento SET ordine = ? WHERE id = ?", [ordine, id]);
-    res.status(200).send("Ordine aggiornato con successo.");
+    // Verifica se l'ordine esiste già in quel reparto
+    const [existing] = await db.query(
+      'SELECT * FROM stati_commessa WHERE ordine = ? AND reparto_id = ? AND id != ?',
+      [nuovoOrdine, repartoId, id]
+    );
+
+    if (existing.length > 0) {
+      return res.status(409).send('L\'ordine è già utilizzato da un altro stato in questo reparto.');
+    }
+
+    // Aggiorna l'ordine
+    await db.query(
+      'UPDATE stati_commessa SET ordine = ? WHERE id = ?',
+      [nuovoOrdine, id]
+    );
+
+    res.status(200).send('Ordine aggiornato con successo.');
   } catch (error) {
-    console.error("Errore durante l'aggiornamento dell'ordine:", error);
-    res.status(500).send("Errore durante l'aggiornamento dell'ordine.");
+    console.error('Errore durante l\'aggiornamento dell\'ordine:', error);
+    res.status(500).send('Errore durante l\'aggiornamento dell\'ordine.');
   }
 });
+
 
 //Ordina stati avanzamento per reparto
 router.put("/:id/reparti/:repartoId/ordina-stati", async (req, res) => {

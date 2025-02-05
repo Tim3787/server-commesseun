@@ -33,4 +33,47 @@ router.post('/', async (req, res) => {
   }
 });
 
+// Aggiorna una prenotazione esistente
+router.put('/:id', async (req, res) => {
+  const { id } = req.params;
+  const { salaId, dataOra, durata, descrizione, utente } = req.body;
+
+  if (!salaId || !dataOra || !durata || !descrizione || !utente) {
+    return res.status(400).send('Tutti i campi sono obbligatori.');
+  }
+
+  try {
+    const [result] = await db.query(
+      'UPDATE prenotazioni_sale SET salaId = ?, dataOra = ?, durata = ?, descrizione = ?, utente = ? WHERE id = ?',
+      [salaId, dataOra, durata, descrizione, utente, id]
+    );
+
+    if (result.affectedRows === 0) {
+      return res.status(404).send('Prenotazione non trovata.');
+    }
+
+    res.status(200).json({ id, salaId, dataOra, durata, descrizione, utente });
+  } catch (error) {
+    console.error('Errore durante l\'aggiornamento della prenotazione:', error);
+    res.status(500).send('Errore durante l\'aggiornamento della prenotazione.');
+  }
+});
+
+// Elimina una prenotazione
+router.delete('/:id', async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    const [result] = await db.query('DELETE FROM prenotazioni_sale WHERE id = ?', [id]);
+
+    if (result.affectedRows === 0) {
+      return res.status(404).send('Prenotazione non trovata.');
+    }
+
+    res.status(200).send('Prenotazione eliminata con successo.');
+  } catch (error) {
+    console.error('Errore durante l\'eliminazione della prenotazione:', error);
+    res.status(500).send('Errore durante l\'eliminazione della prenotazione.');
+  }
+});
 module.exports = router;

@@ -131,7 +131,10 @@ router.post("/login", async (req, res) => {
 
     res.cookie("refreshToken", refreshToken, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
+      secure: true,  // In produzione con HTTPS
+      sameSite: "None", // Necessario se il client e il server sono su domini differenti (es. subdomain)
+      domain: "commesseun.netlify.app", // Sostituisci con il dominio effettivo della tua applicazione
+      path: "/",     // Assicurati che sia "/" per rendere il cookie disponibile a tutto il dominio
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });
 

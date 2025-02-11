@@ -1,7 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const db = require("../config/db");
-
+const jwt = require("jsonwebtoken");
 
 // Middleware per ottenere l'id utente dal token
 const getUserIdFromToken = (req, res, next) => {

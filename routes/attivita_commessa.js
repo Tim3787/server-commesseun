@@ -3,6 +3,22 @@ const router = express.Router();
 const db = require("../config/db");
 
 
+// Middleware per ottenere l'id utente dal token
+const getUserIdFromToken = (req, res, next) => {
+  const authHeader = req.headers["authorization"];
+  if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    return res.status(401).send("Accesso negato. Nessun token fornito.");
+  }
+
+  const token = authHeader.split(" ")[1];
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    req.userId = decoded.id; // Salva l'id utente decodificato nella richiesta
+    next();
+  } catch (err) {
+    res.status(403).send("Token non valido.");
+  }
+};
 
 // Rotta per ottenere le attività
 router.get("/", async (req, res) => {
@@ -64,10 +80,8 @@ WHERE 1=1;
 
 
 
-
 // Assegnare un'attività a una commessa
-// Assegnare un'attività a una commessa
-router.post("/", async (req, res) => {
+router.post("/", getUserIdFromToken, async (req, res) => {
   const {
     commessa_id,
     reparto_id,
@@ -137,6 +151,15 @@ router.post("/", async (req, res) => {
       - Data inizio: ${new Date(data_inizio).toLocaleDateString()}.`;
 
     await db.query("INSERT INTO notifications (user_id, message) VALUES (?, ?)", [userId, message]);
+
+    // Invia la notifica push
+    if (deviceToken) {
+      const sendNotification = require("./sendNotification");
+      await sendNotification(deviceToken, "Nuova Notifica", message);
+      console.log("Notifica push inviata con successo.");
+    } else {
+      console.warn("Device token non presente, notifica push non inviata.");
+    }
 
     res.status(201).send("Attività assegnata con successo!");
   } catch (error) {

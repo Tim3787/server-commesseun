@@ -79,7 +79,6 @@ WHERE 1=1;
 });
 
 
-
 // Assegnare un'attività a una commessa
 router.post("/", getUserIdFromToken, async (req, res) => {
   const {
@@ -104,20 +103,19 @@ router.post("/", getUserIdFromToken, async (req, res) => {
       return res.status(400).send("Errore: La risorsa specificata non esiste.");
     }
 
-    // Verifica se esiste un utente associato a questa risorsa
-    const [user] = await db.query("SELECT id FROM users WHERE risorsa_id = ?", [risorsa_id]);
+    // Recupera l'utente associato alla risorsa (includi device_token)
+    const [user] = await db.query("SELECT id, device_token FROM users WHERE risorsa_id = ?", [risorsa_id]);
     if (user.length === 0) {
       return res.status(400).send("Errore: Nessun utente associato a questa risorsa.");
     }
-
     const userId = user[0].id; // Ottieni l'ID utente
+    const deviceToken = user[0].device_token; // Ottieni il device token
 
     // Recupera il numero commessa
     const [commessa] = await db.query("SELECT numero_commessa FROM commesse WHERE id = ?", [commessa_id]);
     if (commessa.length === 0) {
       return res.status(400).send("Errore: La commessa specificata non esiste.");
     }
-
     const numeroCommessa = commessa[0].numero_commessa;
 
     // Recupera il tipo di attività
@@ -125,7 +123,6 @@ router.post("/", getUserIdFromToken, async (req, res) => {
     if (attivita.length === 0) {
       return res.status(400).send("Errore: L'attività specificata non esiste.");
     }
-
     const tipoAttivita = attivita[0].nome_attivita;
 
     // Inserisce l'attività
@@ -140,11 +137,11 @@ router.post("/", getUserIdFromToken, async (req, res) => {
       attivita_id,
       data_inizio,
       durata,
-      descrizione, // Usa il valore di descrizione, che ha un valore predefinito
+      descrizione,
       stato,
     ]);
 
-    // Crea una notifica per l'utente responsabile (userId)
+    // Crea una notifica per l'utente responsabile
     const message = `Ti è stata assegnata una nuova attività: 
       - Commessa: ${numeroCommessa}
       - Tipo attività: ${tipoAttivita}
@@ -152,7 +149,7 @@ router.post("/", getUserIdFromToken, async (req, res) => {
 
     await db.query("INSERT INTO notifications (user_id, message) VALUES (?, ?)", [userId, message]);
 
-    // Invia la notifica push
+    // Invia la notifica push se esiste il device token
     if (deviceToken) {
       const sendNotification = require("./sendNotification");
       await sendNotification(deviceToken, "Nuova Notifica", message);

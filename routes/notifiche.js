@@ -4,7 +4,41 @@ const db = require("../config/db");
 const jwt = require("jsonwebtoken");
 const sendNotification = require("./sendNotification");
 
-// Middleware per ottenere l'id utente dal token
+
+(req, res, next) => {
+  const authHeader = req.headers["authorization"];
+  const token = authHeader && authHeader.split(" ")[1]; 
+
+  if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    console.error("Formato del token non valido o assente.");
+    return res.status(401).send("Accesso negato. Nessun token fornito o formato non valido.");
+  }
+
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+
+    // Non serve più verificare `role_id` se è stato aggiunto correttamente nel token
+    if (!decoded.id) {
+      console.error("Token decodificato privo dell'ID:", decoded);
+      return res.status(403).send("Token non valido.");
+    }
+
+    req.user = decoded;
+    next();
+  } catch (err) {
+    if (err.name === "TokenExpiredError") {
+      console.error("Token scaduto:", token);
+      return res.status(401).send("Token scaduto. Effettua nuovamente il login.");
+    }
+
+    console.error("Errore durante la verifica del token JWT:", err.message);
+    res.status(403).send("Token non valido.");
+  }
+};
+
+
+
+// Middleware per ottenere l'id utente dal token JWT
 const getUserIdFromToken = (req, res, next) => {
   const authHeader = req.headers["authorization"];
   if (!authHeader || !authHeader.startsWith("Bearer ")) {
@@ -128,9 +162,12 @@ router.put("/:id/note", getUserIdFromToken, async (req, res) => {
 });
 
 
+
+
+// Rotta per aggiornare lo stato di un'attività
 router.put("/:id/stato", getUserIdFromToken, async (req, res) => {
-  const { id } = req.params; // Ottieni l'id dal parametro della richiesta
-  const { stato } = req.body; // Stato richiesto: 1 = iniziata, 2 = completata
+  const { id } = req.params; // Ottieni l'id dell'attività
+  const { stato } = req.body; // Stato richiesto: ad esempio 1 = Iniziata, 2 = Completata
 
   if (stato === undefined) {
     return res.status(400).send("Il campo 'stato' è obbligatorio.");
@@ -140,8 +177,13 @@ router.put("/:id/stato", getUserIdFromToken, async (req, res) => {
     // Recupera i dettagli dell'attività
     const [activity] = await db.query(`
       SELECT 
-        ac.id, ac.commessa_id, ac.risorsa_id, ac.attivita_id,
-        c.numero_commessa, ad.nome_attivita, r.reparto_id
+        ac.id, 
+        ac.commessa_id, 
+        ac.risorsa_id, 
+        ac.attivita_id,
+        c.numero_commessa, 
+        ad.nome_attivita, 
+        r.reparto_id
       FROM attivita_commessa ac
       JOIN commesse c ON ac.commessa_id = c.id
       JOIN attivita ad ON ac.attivita_id = ad.id
@@ -156,7 +198,7 @@ router.put("/:id/stato", getUserIdFromToken, async (req, res) => {
     const numeroCommessa = activity[0].numero_commessa;
     const tipoAttivita = activity[0].nome_attivita;
     const repartoId = activity[0].reparto_id;
-    const risorsaId = activity[0].risorsa_id;
+    // Non serve recuperare risorsaId in questo caso
 
     console.log("Dati attività recuperati:", activity[0]);
 
@@ -169,31 +211,28 @@ router.put("/:id/stato", getUserIdFromToken, async (req, res) => {
     if (result.affectedRows === 0) {
       return res.status(404).send("Attività non trovata.");
     }
-    console.log("Risorsa ID per la query device_token:", risorsaId);
 
-    // Recupera il device_token dall'utente usando risorsa_id
-    const [user] = await db.query(
-      "SELECT device_token FROM users WHERE risorsa_id = ?",
-      [risorsaId]
+    // Ora invia la notifica ai manager di reparto.
+    // Ad esempio, supponiamo che i manager abbiano role_id = 1.
+    // Recupera i device_token dei manager del reparto specificato.
+    const [managers] = await db.query(
+      "SELECT device_token FROM users WHERE role_id = ? AND reparto_id = ?",
+      [1, repartoId]
     );
-    
-    if (user.length > 0) {
-      console.log("Device token recuperato dal database:", user[0].device_token);
-    } else {
-      console.log("Nessun utente trovato con il risorsa_id:", risorsaId);
-    }
-    
-    if (user.length > 0 && user[0].device_token) {
-      const deviceToken = user[0].device_token;
-      const message = `Lo stato dell'attività ${tipoAttivita} della commessa ${numeroCommessa} è stato aggiornato a ${
-        stato === 1 ? "Iniziata" : "Completata"
-      }.`;
 
-      // Invoca la funzione per inviare la notifica
-      await sendNotification(deviceToken, "Aggiornamento attività", message);
-      console.log("Notifica push inviata con successo.");
+    if (managers.length > 0) {
+      for (const mgr of managers) {
+        if (mgr.device_token) {
+          const deviceToken = mgr.device_token;
+          const message = `Lo stato dell'attività ${tipoAttivita} della commessa ${numeroCommessa} è stato aggiornato a ${
+            stato === 1 ? "Iniziata" : "Completata"
+          }.`;
+          await sendNotification(deviceToken, "Aggiornamento attività", message);
+          console.log("Notifica push inviata al manager con token:", deviceToken);
+        }
+      }
     } else {
-      console.log("Nessun dispositivo registrato per ricevere la notifica.");
+      console.log("Nessun manager trovato per il reparto o nessun device token disponibile.");
     }
 
     res.status(200).send("Stato dell'attività aggiornato con successo.");
@@ -202,6 +241,9 @@ router.put("/:id/stato", getUserIdFromToken, async (req, res) => {
     res.status(500).send("Errore durante l'aggiornamento dello stato dell'attività.");
   }
 });
+
+module.exports = router;
+
 
 
 

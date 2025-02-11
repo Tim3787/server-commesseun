@@ -5,6 +5,7 @@ const jwt = require("jsonwebtoken");
 const sendNotification = require("./sendNotification");
 
 
+
 (req, res, next) => {
   const authHeader = req.headers["authorization"];
   const token = authHeader && authHeader.split(" ")[1]; 
@@ -215,25 +216,34 @@ router.put("/:id/stato", getUserIdFromToken, async (req, res) => {
     // Ora invia la notifica ai manager di reparto.
     // Ad esempio, supponiamo che i manager abbiano role_id = 1.
     // Recupera i device_token dei manager del reparto specificato.
-    const [managers] = await db.query(
-      "SELECT device_token FROM users WHERE role_id = ? AND reparto_id = ?",
-      [1, repartoId]
-    );
+    const managerMapping = {
+      1: 26,  // Manager per il reparto 1
+      2: 44,  // Manager per il reparto 2
+    
+      // Aggiungi le altre associazioni come necessario...
+    };
+// Usa la mappatura per ottenere l'id del manager per questo reparto
+const managerId = managerMapping[repartoId];
+if (!managerId) {
+  console.log("Nessun manager associato per il reparto:", repartoId);
+  // Puoi decidere di non inviare la notifica o gestirla in altro modo
+}
 
-    if (managers.length > 0) {
-      for (const mgr of managers) {
-        if (mgr.device_token) {
-          const deviceToken = mgr.device_token;
-          const message = `Lo stato dell'attività ${tipoAttivita} della commessa ${numeroCommessa} è stato aggiornato a ${
-            stato === 1 ? "Iniziata" : "Completata"
-          }.`;
-          await sendNotification(deviceToken, "Aggiornamento attività", message);
-          console.log("Notifica push inviata al manager con token:", deviceToken);
-        }
-      }
-    } else {
-      console.log("Nessun manager trovato per il reparto o nessun device token disponibile.");
-    }
+// Ora recupera il device_token del manager usando il managerId
+const [manager] = await db.query("SELECT device_token FROM users WHERE id = ?", [managerId]);
+
+if (manager.length > 0 && manager[0].device_token) {
+  const deviceToken = manager[0].device_token;
+  const message = `Lo stato dell'attività ${tipoAttivita} della commessa ${numeroCommessa} è stato aggiornato a ${
+    stato === 1 ? "Iniziata" : "Completata"
+  }.`;
+
+  const sendNotification = require("./sendNotification");
+  await sendNotification(deviceToken, "Aggiornamento attività", message);
+  console.log("Notifica push inviata con successo al manager con id:", managerId);
+} else {
+  console.log("Nessun dispositivo registrato per il manager con id:", managerId);
+}
 
     res.status(200).send("Stato dell'attività aggiornato con successo.");
   } catch (err) {

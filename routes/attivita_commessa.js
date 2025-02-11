@@ -3,7 +3,42 @@ const router = express.Router();
 const db = require("../config/db");
 const jwt = require("jsonwebtoken");
 
-// Middleware per ottenere l'id utente dal token
+
+
+(req, res, next) => {
+  const authHeader = req.headers["authorization"];
+  const token = authHeader && authHeader.split(" ")[1]; 
+
+  if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    console.error("Formato del token non valido o assente.");
+    return res.status(401).send("Accesso negato. Nessun token fornito o formato non valido.");
+  }
+
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+
+    // Non serve più verificare `role_id` se è stato aggiunto correttamente nel token
+    if (!decoded.id) {
+      console.error("Token decodificato privo dell'ID:", decoded);
+      return res.status(403).send("Token non valido.");
+    }
+
+    req.user = decoded;
+    next();
+  } catch (err) {
+    if (err.name === "TokenExpiredError") {
+      console.error("Token scaduto:", token);
+      return res.status(401).send("Token scaduto. Effettua nuovamente il login.");
+    }
+
+    console.error("Errore durante la verifica del token JWT:", err.message);
+    res.status(403).send("Token non valido.");
+  }
+};
+
+
+
+// Middleware per ottenere l'id utente dal token JWT
 const getUserIdFromToken = (req, res, next) => {
   const authHeader = req.headers["authorization"];
   if (!authHeader || !authHeader.startsWith("Bearer ")) {
@@ -19,6 +54,7 @@ const getUserIdFromToken = (req, res, next) => {
     res.status(403).send("Token non valido.");
   }
 };
+
 
 // Rotta per ottenere le attività
 router.get("/", async (req, res) => {

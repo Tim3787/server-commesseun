@@ -215,7 +215,7 @@ const formatDateForMySQL = (isoDate) => {
 };
 
 // Modificare un'attività
-router.put("/:id", async (req, res) => {
+router.put("/:id",getUserIdFromToken, async (req, res) => {
   const { id } = req.params;
   const { commessa_id, risorsa_id, attivita_id, data_inizio, durata, descrizione, stato } = req.body;
 
@@ -251,6 +251,15 @@ router.put("/:id", async (req, res) => {
       - Data inizio: ${new Date(data_inizio).toLocaleDateString()}.`;
     await db.query("INSERT INTO notifications (user_id, message) VALUES (?, ?)", [userId, message]);
 
+        // Invia la notifica push se esiste il device token
+        if (deviceToken) {
+          const sendNotification = require("./sendNotification");
+          await sendNotification(deviceToken, "Nuova Notifica", message);
+          console.log("Notifica push inviata con successo.");
+        } else {
+          console.warn("Device token non presente, notifica push non inviata.");
+        }
+
     res.send("Attività aggiornata con successo e notifica inviata!");
   } catch (err) {
     console.error("Errore durante la modifica dell'attività:", err);
@@ -260,7 +269,7 @@ router.put("/:id", async (req, res) => {
 
 
 // Eliminare un'attività
-router.delete("/:id", async (req, res) => {
+router.delete("/:id", getUserIdFromToken,async (req, res) => {
   const { id } = req.params;
 
   try {
@@ -299,6 +308,15 @@ router.delete("/:id", async (req, res) => {
       - Commessa: ${numeroCommessa}
       - Tipo attività: ${tipoAttivita}`;
     await db.query("INSERT INTO notifications (user_id, message) VALUES (?, ?)", [userId, message]);
+    
+      // Invia la notifica push se esiste il device token
+      if (deviceToken) {
+        const sendNotification = require("./sendNotification");
+        await sendNotification(deviceToken, "Nuova Notifica", message);
+        console.log("Notifica push inviata con successo.");
+      } else {
+        console.warn("Device token non presente, notifica push non inviata.");
+      }
 
     res.send("Attività eliminata con successo e notifica inviata!");
   } catch (err) {

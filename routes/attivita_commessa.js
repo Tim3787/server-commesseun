@@ -215,22 +215,25 @@ const formatDateForMySQL = (isoDate) => {
 };
 
 // Modificare un'attività
-router.put("/:id",getUserIdFromToken, async (req, res) => {
+router.put("/:id", getUserIdFromToken, async (req, res) => {
   const { id } = req.params;
   const { commessa_id, risorsa_id, attivita_id, data_inizio, durata, descrizione, stato } = req.body;
 
   const formattedDataInizio = formatDateForMySQL(data_inizio);
 
   try {
-    // Recupera le informazioni per la notifica
+    // Recupera il numero della commessa
     const [commessa] = await db.query("SELECT numero_commessa FROM commesse WHERE id = ?", [commessa_id]);
     const numeroCommessa = commessa.length > 0 ? commessa[0].numero_commessa : "Sconosciuta";
 
+    // Recupera il tipo di attività
     const [attivita] = await db.query("SELECT nome_attivita FROM attivita WHERE id = ?", [attivita_id]);
     const tipoAttivita = attivita.length > 0 ? attivita[0].nome_attivita : "Sconosciuta";
 
-    const [risorsa] = await db.query("SELECT id FROM users WHERE risorsa_id = ?", [risorsa_id]);
+    // Recupera l'utente associato alla risorsa per ottenere l'id e il device token
+    const [risorsa] = await db.query("SELECT id, device_token FROM users WHERE risorsa_id = ?", [risorsa_id]);
     const userId = risorsa.length > 0 ? risorsa[0].id : null;
+    const deviceToken = risorsa.length > 0 ? risorsa[0].device_token : null;
 
     if (!userId) {
       return res.status(400).send("Errore: Nessun utente associato a questa risorsa.");
@@ -239,7 +242,7 @@ router.put("/:id",getUserIdFromToken, async (req, res) => {
     // Aggiorna l'attività
     const sql = `
       UPDATE attivita_commessa 
-      SET commessa_id = ?, risorsa_id = ?, attivita_id = ?, data_inizio = ?, durata = ? , descrizione = ?, stato = ?
+      SET commessa_id = ?, risorsa_id = ?, attivita_id = ?, data_inizio = ?, durata = ?, descrizione = ?, stato = ?
       WHERE id = ?
     `;
     await db.query(sql, [commessa_id, risorsa_id, attivita_id, formattedDataInizio, durata, descrizione, stato, id]);
@@ -251,14 +254,14 @@ router.put("/:id",getUserIdFromToken, async (req, res) => {
       - Data inizio: ${new Date(data_inizio).toLocaleDateString()}.`;
     await db.query("INSERT INTO notifications (user_id, message) VALUES (?, ?)", [userId, message]);
 
-        // Invia la notifica push se esiste il device token
-        if (deviceToken) {
-          const sendNotification = require("./sendNotification");
-          await sendNotification(deviceToken, "Nuova Notifica", message);
-          console.log("Notifica push inviata con successo.");
-        } else {
-          console.warn("Device token non presente, notifica push non inviata.");
-        }
+    // Invia la notifica push se esiste il device token
+    if (deviceToken) {
+      const sendNotification = require("./sendNotification");
+      await sendNotification(deviceToken, "Nuova Notifica", message);
+      console.log("Notifica push inviata con successo.");
+    } else {
+      console.warn("Device token non presente, notifica push non inviata.");
+    }
 
     res.send("Attività aggiornata con successo e notifica inviata!");
   } catch (err) {
@@ -269,7 +272,7 @@ router.put("/:id",getUserIdFromToken, async (req, res) => {
 
 
 // Eliminare un'attività
-router.delete("/:id", getUserIdFromToken,async (req, res) => {
+router.delete("/:id", getUserIdFromToken, async (req, res) => {
   const { id } = req.params;
 
   try {
@@ -291,9 +294,10 @@ router.delete("/:id", getUserIdFromToken,async (req, res) => {
     const tipoAttivita = activity[0].nome_attivita;
     const risorsaId = activity[0].risorsa_id;
 
-    // Recupera l'utente associato alla risorsa
-    const [user] = await db.query("SELECT id FROM users WHERE risorsa_id = ?", [risorsaId]);
+    // Recupera l'utente associato alla risorsa, inclusi id e device_token
+    const [user] = await db.query("SELECT id, device_token FROM users WHERE risorsa_id = ?", [risorsaId]);
     const userId = user.length > 0 ? user[0].id : null;
+    const deviceToken = user.length > 0 ? user[0].device_token : null;
 
     if (!userId) {
       return res.status(400).send("Errore: Nessun utente associato a questa risorsa.");
@@ -309,14 +313,14 @@ router.delete("/:id", getUserIdFromToken,async (req, res) => {
       - Tipo attività: ${tipoAttivita}`;
     await db.query("INSERT INTO notifications (user_id, message) VALUES (?, ?)", [userId, message]);
     
-      // Invia la notifica push se esiste il device token
-      if (deviceToken) {
-        const sendNotification = require("./sendNotification");
-        await sendNotification(deviceToken, "Nuova Notifica", message);
-        console.log("Notifica push inviata con successo.");
-      } else {
-        console.warn("Device token non presente, notifica push non inviata.");
-      }
+    // Invia la notifica push se esiste il device token
+    if (deviceToken) {
+      const sendNotification = require("./sendNotification");
+      await sendNotification(deviceToken, "Nuova Notifica", message);
+      console.log("Notifica push inviata con successo.");
+    } else {
+      console.warn("Device token non presente, notifica push non inviata.");
+    }
 
     res.send("Attività eliminata con successo e notifica inviata!");
   } catch (err) {
@@ -324,5 +328,6 @@ router.delete("/:id", getUserIdFromToken,async (req, res) => {
     res.status(500).send("Errore durante l'eliminazione dell'attività.");
   }
 });
+
 
 module.exports = router;

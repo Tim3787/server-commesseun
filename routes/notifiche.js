@@ -262,9 +262,15 @@ router.delete("/:resourceId", async (req, res) => {
   const { resourceId } = req.params;
 
   try {
-    // Elimina tutte le notifiche dove il campo user_id corrisponde a resourceId
-    await db.query("DELETE FROM notifications WHERE user_id = ?", [resourceId]);
-    res.status(200).send("Notifiche eliminate con successo.");
+    // Esegue la query DELETE e ottiene il risultato (ad esempio, affectedRows)
+    const [result] = await db.query("DELETE FROM notifications WHERE user_id = ?", [resourceId]);
+    console.log("Numero di righe eliminate:", result.affectedRows);
+
+    if (result.affectedRows > 0) {
+      res.status(200).send("Notifiche eliminate con successo.");
+    } else {
+      res.status(404).send("Nessuna notifica trovata per questo resourceId.");
+    }
   } catch (err) {
     console.error("Errore durante l'eliminazione delle notifiche:", err);
     res.status(500).send("Errore durante l'eliminazione delle notifiche.");

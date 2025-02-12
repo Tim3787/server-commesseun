@@ -11,7 +11,7 @@ if (!admin.apps.length) {
 
 const sendNotification = async (deviceToken, title, body) => {
   const message = {
-    data: {
+    notification: {
       title,
       body,
     },

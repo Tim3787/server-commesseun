@@ -258,24 +258,29 @@ module.exports = router;
 
 
 // Elimina tutte le notifiche per una determinata risorsa
-router.delete("/:resourceId", async (req, res) => {
-  const { resourceId } = req.params;
+router.delete("/:userId", async (req, res) => {
+  // Estrae l'ID dell'utente dalla URL (il parametro userId)
+  const { userId } = req.params;
 
   try {
-    // Esegue la query DELETE e ottiene il risultato (ad esempio, affectedRows)
-    const [result] = await db.query("DELETE FROM notifications WHERE user_id = ?", [resourceId]);
+    // Esegue la query DELETE per eliminare tutte le notifiche in cui user_id corrisponde a userId
+    const [result] = await db.query("DELETE FROM notifications WHERE user_id = ?", [userId]);
     console.log("Numero di righe eliminate:", result.affectedRows);
 
+    // Se la query ha eliminato almeno una riga, invia un messaggio di successo
     if (result.affectedRows > 0) {
       res.status(200).send("Notifiche eliminate con successo.");
     } else {
-      res.status(404).send("Nessuna notifica trovata per questo resourceId.");
+      // Se nessuna notifica corrisponde a quel userId, invia uno status 404
+      res.status(404).send("Nessuna notifica trovata per questo userId.");
     }
   } catch (err) {
+    // In caso di errore, stampa l'errore e invia uno status 500
     console.error("Errore durante l'eliminazione delle notifiche:", err);
     res.status(500).send("Errore durante l'eliminazione delle notifiche.");
   }
 });
+
 
 
 

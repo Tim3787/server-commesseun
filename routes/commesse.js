@@ -299,7 +299,7 @@ router.post("/", async (req, res) => {
     // Continua con l'inserimento della commessa
     const insertCommessaSql = `
       INSERT INTO commesse (numero_commessa, tipo_macchina, descrizione, data_consegna, altri_particolari, stati_avanzamento, cliente, stato_commessa)
-      VALUES (?, ?, ?, ?, ?, ?, ?)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
     `;
 
     const [result] = await db.query(insertCommessaSql, [

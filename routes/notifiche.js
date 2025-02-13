@@ -168,12 +168,17 @@ router.put("/:id/note", getUserIdFromToken, async (req, res) => {
 router.put("/:id/stato", getUserIdFromToken, async (req, res) => {
   const { id } = req.params; // Ottieni l'id dell'attività
   const { stato } = req.body; // Stato richiesto: ad esempio 1 = Iniziata, 2 = Completata
+  const userId = req.userId; // Ottieni l'ID utente dal token
 
   if (stato === undefined) {
     return res.status(400).send("Il campo 'stato' è obbligatorio.");
   }
 
   try {
+        // Recupera i dettagli dell'utente
+        const [user] = await db.query("SELECT nome FROM users WHERE id = ?", [userId]);
+        const userName = user.length > 0 ? user[0].nome : "Utente sconosciuto";
+
     // Recupera i dettagli dell'attività
     const [activity] = await db.query(`
       SELECT 
@@ -233,9 +238,7 @@ const [manager] = await db.query("SELECT device_token FROM users WHERE id = ?", 
 
 if (manager.length > 0 && manager[0].device_token) {
   const deviceToken = manager[0].device_token;
-  const message = `Lo stato dell'attività ${tipoAttivita} della commessa ${numeroCommessa} è stato aggiornato a ${
-    stato === 1 ? "Iniziata" : "Completata"
-  }.`;
+   const message = `${userName} ha aggiornato lo stato dell'attività "${tipoAttivita}" della commessa "${numeroCommessa}" a ${stato === 1 ? "Iniziata" : "Completata"}.`;
 
   const sendNotification = require("./sendNotification");
   await sendNotification(deviceToken, "Aggiornamento attività", message);

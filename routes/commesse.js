@@ -248,7 +248,7 @@ router.put("/:commessaId/reparti/:repartoId/stato", async (req, res) => {
 
 // Creare una nuova commessa con stati avanzamento iniziali
 router.post("/", async (req, res) => {
-  const { numero_commessa, tipo_macchina, descrizione, data_consegna, altri_particolari,cliente, stato  } = req.body;
+  const { numero_commessa, tipo_macchina, descrizione, data_consegna, altri_particolari,cliente, stato_commessa  } = req.body;
 
   if (!numero_commessa || !tipo_macchina) {
     return res.status(400).send("I campi numero_commessa e tipo_macchina sono obbligatori.");
@@ -298,7 +298,7 @@ router.post("/", async (req, res) => {
 
     // Continua con l'inserimento della commessa
     const insertCommessaSql = `
-      INSERT INTO commesse (numero_commessa, tipo_macchina, descrizione, data_consegna, altri_particolari, stati_avanzamento, cliente, stato)
+      INSERT INTO commesse (numero_commessa, tipo_macchina, descrizione, data_consegna, altri_particolari, stati_avanzamento, cliente, stato_commessa)
       VALUES (?, ?, ?, ?, ?, ?, ?)
     `;
 
@@ -310,7 +310,7 @@ router.post("/", async (req, res) => {
       altri_particolari,
       JSON.stringify(statiAvanzamento), // Salva gli stati come JSON
       cliente,
-      stato,
+      stato_commessa,
     ]);
 
     res.status(201).json({

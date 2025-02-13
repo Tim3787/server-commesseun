@@ -196,42 +196,50 @@ router.post("/logout", async (req, res) => {
 });
 
 
-
-// Rotta per il recupero password
+// Rotta per il recupero password (Forgot Password)
 router.post("/forgot-password", async (req, res) => {
+  // Estrae l'email dal body della richiesta
   const { email } = req.body;
 
+  // Se l'email non è fornita, restituisce un errore 400
   if (!email) {
     return res.status(400).send("Email obbligatoria.");
   }
-
+  console.log("EMAIL:", process.env.EMAIL_USER);
+  console.log("PASS:", process.env.EMAIL_PASS);
+  
   try {
-    const [rows] = await db.query("SELECT * FROM users WHERE email = ?", [
-      email,
-    ]);
+    // Cerca l'utente in base all'email
+    const [rows] = await db.query("SELECT * FROM users WHERE email = ?", [email]);
 
+    // Se l'utente non viene trovato, restituisce un errore 404
     if (rows.length === 0) {
       return res.status(404).send("Email non trovata.");
     }
 
+    // Genera un token casuale e calcola la scadenza (1 ora)
     const resetToken = crypto.randomBytes(32).toString("hex");
-    const resetTokenExpires = new Date(Date.now() + 3600000); // Valido per 1 ora
+    const resetTokenExpires = new Date(Date.now() + 3600000); // 1 ora in millisecondi
 
+    // Aggiorna l'utente impostando il token e la scadenza
     await db.query(
       "UPDATE users SET reset_token = ?, reset_token_expires = ? WHERE email = ?",
       [resetToken, resetTokenExpires, email]
     );
 
+    // Configura il trasportatore di nodemailer per inviare l'email
     const transporter = nodemailer.createTransport({
       service: "gmail",
       auth: {
-        user: process.env.EMAIL_USER, // Variabile d'ambiente per l'email
-        pass: process.env.EMAIL_PASS, // Variabile d'ambiente per la password
+        user: process.env.EMAIL_USER, // Email da utilizzare (variabile d'ambiente)
+        pass: process.env.EMAIL_PASS, // Password o password per app
       },
     });
 
+    // Costruisce il link per il reset password (modifica l'URL secondo le tue esigenze)
     const resetLink = `http://localhost:3000/reset-password?token=${resetToken}`;
 
+    // Invia l'email con il link per il reset
     await transporter.sendMail({
       to: email,
       subject: "Recupero Password",
@@ -245,27 +253,33 @@ router.post("/forgot-password", async (req, res) => {
   }
 });
 
-// Rotta per reimpostare la password
+// Rotta per reimpostare la password (Reset Password)
 router.post("/reset-password", async (req, res) => {
+  // Estrae il token e la nuova password dal body della richiesta
   const { token, newPassword } = req.body;
 
+  // Se uno dei campi non è fornito, restituisce un errore 400
   if (!token || !newPassword) {
     return res.status(400).send("Tutti i campi sono obbligatori.");
   }
 
   try {
+    // Verifica che esista un utente con il token fornito e che il token non sia scaduto
     const [rows] = await db.query(
       "SELECT * FROM users WHERE reset_token = ? AND reset_token_expires > NOW()",
       [token]
     );
 
+    // Se non viene trovato nessun utente, restituisce un errore 400
     if (rows.length === 0) {
       return res.status(400).send("Token non valido o scaduto.");
     }
 
     const user = rows[0];
+    // Hash della nuova password
     const hashedPassword = await bcrypt.hash(newPassword, 10);
 
+    // Aggiorna l'utente con la nuova password e resetta il token
     await db.query(
       "UPDATE users SET password = ?, reset_token = NULL, reset_token_expires = NULL WHERE id = ?",
       [hashedPassword, user.id]

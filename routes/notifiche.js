@@ -67,7 +67,6 @@ router.get("/", getUserIdFromToken, async (req, res) => {
       "SELECT * FROM notifications WHERE user_id = ? ORDER BY created_at DESC",
       [userId]
     );
-    console.log(` ${userId}:`, notifications);
     res.json(notifications);
   } catch (err) {
     console.error(`Errore nel recupero delle notifiche per l'utente ${userId}:`, err);

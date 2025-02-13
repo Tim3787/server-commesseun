@@ -237,7 +237,7 @@ router.post("/forgot-password", async (req, res) => {
     });
 
     // Costruisce il link per il reset password (modifica l'URL secondo le tue esigenze)
-    const resetLink = `https://server-commesseun.onrender.com/reset-password?token=${resetToken}`;
+    const resetLink = `https://commesseun.netlify.app/reset-password?token=${resetToken}`;
 
     // Invia l'email con il link per il reset
     await transporter.sendMail({

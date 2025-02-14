@@ -1,6 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const db = require("../config/db"); // Assicurati che il percorso sia corretto
+const { verificaStatiCommesse, allineaStatiCommesse } = require("./statiAvanzamentoUtils");
 
 // Recupera tutti gli stati di avanzamento di una commessa specifica
 router.get("/:commessa_id", async (req, res) => {
@@ -48,7 +49,8 @@ router.post("/", async (req, res) => {
 
     const updateSql = `UPDATE commesse SET stati_avanzamento = ? WHERE id = ?`;
     await db.query(updateSql, [JSON.stringify(statiAvanzamento), commessa_id]);
-
+    await verificaStatiCommesse();
+    await allineaStatiCommesse();
     res.status(201).send("Stato di avanzamento aggiunto con successo!");
   } catch (error) {
     console.error("Errore durante l'aggiunta dello stato di avanzamento:", error);
@@ -107,7 +109,8 @@ router.delete("/:commessa_id/stati/:stato_id", async (req, res) => {
 
     const updateSql = `UPDATE commesse SET stati_avanzamento = ? WHERE id = ?`;
     await db.query(updateSql, [JSON.stringify(statiAvanzamento), commessa_id]);
-
+    await verificaStatiCommesse();
+    await allineaStatiCommesse();
     res.send("Stato di avanzamento eliminato con successo!");
   } catch (error) {
     console.error("Errore durante l'eliminazione dello stato di avanzamento:", error);

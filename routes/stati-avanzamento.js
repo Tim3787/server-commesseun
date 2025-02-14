@@ -1,6 +1,7 @@
 const express = require("express");
 const db = require("../config/db");
 const router = express.Router();
+const { verificaStatiCommesse, allineaStatiCommesse } = require("./statiAvanzamentoUtils");
 
 // Recupera tutti gli stati di avanzamento per un reparto specifico
 router.get("/reparto/:reparto_id", async (req, res) => {
@@ -123,7 +124,10 @@ router.post("/", async (req, res) => {
         await db.query(
           "UPDATE commesse SET stati_avanzamento = ? WHERE id = ?",
           [JSON.stringify(statiAvanzamento), commessa.id]
+          
         );
+        await verificaStatiCommesse();
+    await allineaStatiCommesse();
       }
     }
 
@@ -148,6 +152,8 @@ router.put("/:id", async (req, res) => {
   const sql = "UPDATE stati_avanzamento SET nome_stato = ?, reparto_id = ? WHERE id = ?";
   try {
     const [result] = await db.query(sql, [nome_stato, reparto_id, id]);
+    await verificaStatiCommesse();
+    await allineaStatiCommesse();
     if (result.affectedRows === 0) {
       return res.status(404).send("Stato di avanzamento non trovato.");
     }
@@ -164,6 +170,8 @@ router.delete("/:id", async (req, res) => {
   const sql = "DELETE FROM stati_avanzamento WHERE id = ?";
   try {
     const [result] = await db.query(sql, [id]);
+    await verificaStatiCommesse();
+    await allineaStatiCommesse();
     if (result.affectedRows === 0) {
       return res.status(404).send("Stato di avanzamento non trovato.");
     }
@@ -186,7 +194,7 @@ router.put('/:id/ordine', async (req, res) => {
   try {
     // Verifica se l'ordine esiste già in quel reparto
     const [existing] = await db.query(
-      'SELECT * FROM stati_commessa WHERE ordine = ? AND reparto_id = ? AND id != ?',
+      'SELECT * FROM stati_avanzamento WHERE ordine = ? AND reparto_id = ? AND id != ?',
       [nuovoOrdine, repartoId, id]
     );
 

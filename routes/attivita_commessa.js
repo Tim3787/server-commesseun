@@ -270,7 +270,6 @@ router.put("/:id", getUserIdFromToken, async (req, res) => {
   }
 });
 
-
 // Eliminare un'attività
 router.delete("/:id", getUserIdFromToken, async (req, res) => {
   const { id } = req.params;
@@ -294,25 +293,28 @@ router.delete("/:id", getUserIdFromToken, async (req, res) => {
     const tipoAttivita = activity[0].nome_attivita;
     const risorsaId = activity[0].risorsa_id;
 
-    // Recupera l'utente associato alla risorsa, inclusi id e device_token
+    // Recupera l'utente associato alla risorsa, se esiste
     const [user] = await db.query("SELECT id, device_token FROM users WHERE risorsa_id = ?", [risorsaId]);
     const userId = user.length > 0 ? user[0].id : null;
     const deviceToken = user.length > 0 ? user[0].device_token : null;
 
+    // Se non esiste un utente associato, logga un avviso e prosegui
     if (!userId) {
-      return res.status(400).send("Errore: Nessun utente associato a questa risorsa.");
+      console.warn("Attività cancellata, ma nessun utente associato a questa risorsa.");
     }
 
     // Elimina l'attività
     const sql = `DELETE FROM attivita_commessa WHERE id = ?`;
     await db.query(sql, [id]);
 
-    // Crea una notifica
+    // Crea una notifica solo se esiste un utente associato
     const message = `L'attività è stata eliminata:
       - Commessa: ${numeroCommessa}
       - Tipo attività: ${tipoAttivita}`;
-    await db.query("INSERT INTO notifications (user_id, message) VALUES (?, ?)", [userId, message]);
-    
+    if (userId) {
+      await db.query("INSERT INTO notifications (user_id, message) VALUES (?, ?)", [userId, message]);
+    }
+
     // Invia la notifica push se esiste il device token
     if (deviceToken) {
       const sendNotification = require("./sendNotification");
@@ -322,7 +324,7 @@ router.delete("/:id", getUserIdFromToken, async (req, res) => {
       console.warn("Device token non presente, notifica push non inviata.");
     }
 
-    res.send("Attività eliminata con successo e notifica inviata!");
+    res.send("Attività eliminata con successo!");
   } catch (err) {
     console.error("Errore durante l'eliminazione dell'attività:", err);
     res.status(500).send("Errore durante l'eliminazione dell'attività.");

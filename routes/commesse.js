@@ -248,7 +248,8 @@ router.put("/:commessaId/reparti/:repartoId/stato", async (req, res) => {
 
 // Creare una nuova commessa con stati avanzamento iniziali
 router.post("/", async (req, res) => {
-  const { numero_commessa, tipo_macchina, descrizione, data_consegna, altri_particolari,cliente, stato_commessa  } = req.body;
+  const { numero_commessa, tipo_macchina, descrizione, data_consegna, altri_particolari, cliente, stato_commessa, stato_iniziale } = req.body;
+
 
   if (!numero_commessa || !tipo_macchina) {
     return res.status(400).send("I campi numero_commessa e tipo_macchina sono obbligatori.");
@@ -293,7 +294,7 @@ router.post("/", async (req, res) => {
       ordine: stato.ordine,
       data_inizio: null,
       data_fine: null,
-      isActive: stato.nome_stato === 'In Entrata', // Solo "In Entrata" è attivo inizialmente
+      isActive: stato.nome_stato === stato_iniziale, 
     }));
 
     // Continua con l'inserimento della commessa

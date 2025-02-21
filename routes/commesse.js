@@ -354,7 +354,7 @@ router.delete("/:commessaId", async (req, res) => {
 
 
 
-// CREA ATTIVITÀ INIZIALI
+// CREA ATTIVITà QUANDO CREI COMMESSA
 router.post("/assegna-attivita-predefinite", async (req, res) => {
   const attivitaDaAggiungere = req.body;
 
@@ -364,11 +364,12 @@ router.post("/assegna-attivita-predefinite", async (req, res) => {
 
   try {
     const query = `
-      INSERT INTO attivita_commessa (commessa_id, reparto_id, attivita_id)
-      VALUES (?, ?, ?)
+      INSERT INTO attivita_commessa (commessa_id, reparto_id, attivita_id, durata)
+      VALUES (?, ?, ?, ?)
     `;
-    for (const { commessa_id, reparto_id, attivita_id } of attivitaDaAggiungere) {
-      await db.query(query, [commessa_id, reparto_id, attivita_id]);
+    for (const { commessa_id, reparto_id, attivita_id, durata } of attivitaDaAggiungere) {
+      // Usa la durata fornita, oppure un default (es. 1)
+      await db.query(query, [commessa_id, reparto_id, attivita_id, durata || 1]);
     }
 
     res.status(201).send("Attività assegnate con successo!");
@@ -377,6 +378,7 @@ router.post("/assegna-attivita-predefinite", async (req, res) => {
     res.status(500).send("Errore durante l'inserimento delle attività.");
   }
 });
+
 
 // Endpoint per aggiornare uno specifico stato avanzamento di una commessa
 router.put("/:commessaId/stati-avanzamento/:statoId", async (req, res) => {

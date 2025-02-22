@@ -63,10 +63,10 @@ app.use((err, req, res, next) => {
   });
 });
 
-// Avvio del server
+// Avvio del server 
 const PORT = process.env.PORT || 5000; // Usa variabile d'ambiente PORT, se disponibile
 app.listen(PORT, () => {
-  console.log(`Nuovo server in esecuzione sulla porta ${PORT}`);
+  console.log(`Nuovo SERVER in esecuzione sulla porta ${PORT}`);
 
 });
 

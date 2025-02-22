@@ -66,7 +66,7 @@ app.use((err, req, res, next) => {
 // Avvio del server
 const PORT = process.env.PORT || 5000; // Usa variabile d'ambiente PORT, se disponibile
 app.listen(PORT, () => {
-  console.log(`Server in esecuzione sulla porta ${PORT}`);
+  console.log(`Nuovo server in esecuzione sulla porta ${PORT}`);
 
 });
 
@@ -75,5 +75,5 @@ connection.connect((err) => {
     console.error('Errore di connessione al database:', err.stack);
     return;
   }
-  console.log('Connesso al database Amazon RDS');
+  console.log('Connesso al database');
 });

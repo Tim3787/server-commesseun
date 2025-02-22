@@ -34,7 +34,7 @@ const connection = mysql.createConnection({
 app.use(helmet()); // Aggiunge intestazioni di sicurezza
 
 const corsOptions = {
-  origin: ["http://localhost:3000", "https://commesseun.netlify.app"],  // Permetti sia localhost che Netlify
+  origin: ["http://localhost:3000", "https://commesseun.netlify.app","https://www.unitech-app.it"],  // Permetti sia localhost che Netlify
   credentials: true,  // Necessario per i cookie HTTP-only
 };
 

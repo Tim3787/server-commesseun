@@ -16,6 +16,7 @@ const commessaStatiRoutes = require("./routes/stati-avanzamento");
 const notificheRoutes = require("./routes/notifiche");
 const statoCommessaRoutes  = require("./routes/stato-commessa.js");
 const PrenotazioneSaleRoutes  = require("./routes/sale-riunioni.js");
+const CommessaDettagliRoutes  = require("./routes/commessa-dettagli.js");
 
 const app = express();
 const cookieParser = require("cookie-parser");
@@ -54,6 +55,7 @@ app.use("/api/commessa-stati", commessaStatiRoutes);
 app.use("/api/notifiche", notificheRoutes)
 app.use("/api/stato-commessa", statoCommessaRoutes);
 app.use("/api/sale-riunioni", PrenotazioneSaleRoutes);
+app.use("/api/commessa-dettagli", CommessaDettagliRoutes);
 
 // Middleware di gestione degli errori
 app.use((err, req, res, next) => {

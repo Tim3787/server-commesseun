@@ -14,7 +14,7 @@ router.post('/macchine', async (req, res) => {
   }
   try {
     const insertSql = `INSERT INTO Macchine (macchina, modello) VALUES (?, ?)`;
-    const [result] = await db.promise().query(insertSql, [macchina, modello]);
+    const [result] = await db.query(insertSql, [macchina, modello]);
     res.status(201).json({ message: "Macchina aggiunta con successo.", macchinaId: result.insertId });
   } catch (err) {
     console.error("Errore durante l'aggiunta della macchina:", err);
@@ -25,7 +25,7 @@ router.post('/macchine', async (req, res) => {
 // GET: Recupera tutte le macchine
 router.get('/macchine', async (req, res) => {
   try {
-    const [macchine] = await db.promise().query(`SELECT * FROM Macchine`);
+    const [macchine] = await db.query(`SELECT * FROM Macchine`);
     res.status(200).json(macchine);
   } catch (err) {
     console.error("Errore durante il recupero delle macchine:", err);
@@ -42,7 +42,7 @@ router.put('/macchine/:id', async (req, res) => {
   }
   try {
     const updateSql = `UPDATE Macchine SET macchina = ?, modello = ? WHERE id = ?`;
-    await db.promise().query(updateSql, [macchina, modello, id]);
+    await db.query(updateSql, [macchina, modello, id]);
     res.status(200).json({ message: "Macchina aggiornata con successo." });
   } catch (err) {
     console.error("Errore durante l'aggiornamento della macchina:", err);
@@ -65,7 +65,7 @@ router.post('/componenti', async (req, res) => {
   }
   try {
     const insertSql = `INSERT INTO Componenti (componente, macchina_id, tipo) VALUES (?, ?, ?)`;
-    const [result] = await db.promise().query(insertSql, [nome_componente, macchina_id, tipo]);
+    const [result] = await db.query(insertSql, [nome_componente, macchina_id, tipo]);
     res.status(201).json({ message: "Componente aggiunto con successo.", componenteId: result.insertId });
   } catch (err) {
     console.error("Errore durante l'aggiunta del componente:", err);
@@ -76,7 +76,7 @@ router.post('/componenti', async (req, res) => {
 // GET: Recupera tutti i componenti
 router.get('/componenti', async (req, res) => {
   try {
-    const [componenti] = await db.promise().query(`SELECT * FROM Componenti`);
+    const [componenti] = await db.query(`SELECT * FROM Componenti`);
     res.status(200).json(componenti);
   } catch (err) {
     console.error("Errore durante il recupero dei componenti:", err);
@@ -93,7 +93,7 @@ router.put('/componenti/:id', async (req, res) => {
   }
   try {
     const updateSql = `UPDATE Componenti SET componente = ?, macchina_id = ?, tipo = ? WHERE id = ?`;
-    await db.promise().query(updateSql, [nome_componente, macchina_id, tipo, id]);
+    await db.query(updateSql, [nome_componente, macchina_id, tipo, id]);
     res.status(200).json({ message: "Componente aggiornato con successo." });
   } catch (err) {
     console.error("Errore durante l'aggiornamento del componente:", err);
@@ -116,14 +116,14 @@ router.post('/commesse/:commessaId/macchine', async (req, res) => {
   }
   try {
     // Verifica se la commessa esiste (lettura dalla tabella "commesse")
-    const [commessa] = await db.promise().query('SELECT * FROM commesse WHERE id = ?', [commessaId]);
+    const [commessa] = await db.query('SELECT * FROM commesse WHERE id = ?', [commessaId]);
     if (commessa.length === 0) {
       return res.status(404).send("Commessa non trovata.");
     }
     // Inserisci le associazioni in Commesse_Dettagli
     const insertSql = `INSERT INTO Commesse_Dettagli (commessa_id, macchina_id) VALUES (?, ?)`;
     for (const macchinaId of macchina_ids) {
-      await db.promise().query(insertSql, [commessaId, macchinaId]);
+      await db.query(insertSql, [commessaId, macchinaId]);
     }
     res.status(201).json({ message: "Macchine associate con successo alla commessa." });
   } catch (err) {
@@ -136,7 +136,7 @@ router.post('/commesse/:commessaId/macchine', async (req, res) => {
 router.get('/commesse/:commessaId/macchine', async (req, res) => {
   const { commessaId } = req.params;
   try {
-    const [macchine] = await db.promise().query(`
+    const [macchine] = await db.query(`
       SELECT m.id, m.macchina, m.modello
       FROM Macchine m
       JOIN Commesse_Dettagli cd ON m.id = cd.macchina_id
@@ -157,16 +157,16 @@ router.put('/commesse/:commessaId/macchine', async (req, res) => {
     return res.status(400).send("Il campo macchina_ids è obbligatorio e deve contenere almeno una macchina.");
   }
   try {
-    const [commessa] = await db.promise().query('SELECT * FROM commesse WHERE id = ?', [commessaId]);
+    const [commessa] = await db.query('SELECT * FROM commesse WHERE id = ?', [commessaId]);
     if (commessa.length === 0) {
       return res.status(404).send("Commessa non trovata.");
     }
     // Elimina le associazioni esistenti
-    await db.promise().query('DELETE FROM Commesse_Dettagli WHERE commessa_id = ?', [commessaId]);
+    await db.query('DELETE FROM Commesse_Dettagli WHERE commessa_id = ?', [commessaId]);
     // Inserisci le nuove associazioni
     const insertSql = `INSERT INTO Commesse_Dettagli (commessa_id, macchina_id) VALUES (?, ?)`;
     for (const macchinaId of macchina_ids) {
-      await db.promise().query(insertSql, [commessaId, macchinaId]);
+      await db.query(insertSql, [commessaId, macchinaId]);
     }
     res.status(200).json({ message: "Macchine associate aggiornate con successo." });
   } catch (err) {
@@ -192,7 +192,7 @@ router.post('/commesse/:commessaId/componenti', async (req, res) => {
   
   try {
     // Verifica se la commessa esiste (lettura dalla tabella "commesse")
-    const [commessa] = await db.promise().query('SELECT * FROM commesse WHERE id = ?', [commessaId]);
+    const [commessa] = await db.query('SELECT * FROM commesse WHERE id = ?', [commessaId]);
     if (commessa.length === 0) {
       return res.status(404).send("Commessa non trovata.");
     }
@@ -207,7 +207,7 @@ router.post('/commesse/:commessaId/componenti', async (req, res) => {
       if (!componente_id || !tipo_associato) {
         return res.status(400).send("Ogni oggetto deve contenere componente_id e tipo_associato.");
       }
-      await db.promise().query(insertSql, [commessaId, componente_id, tipo_associato]);
+      await db.query(insertSql, [commessaId, componente_id, tipo_associato]);
     }
     
     res.status(201).json({
@@ -231,13 +231,13 @@ router.put('/commesse/:commessaId/componenti', async (req, res) => {
   
   try {
     // Verifica se la commessa esiste
-    const [commessa] = await db.promise().query('SELECT * FROM commesse WHERE id = ?', [commessaId]);
+    const [commessa] = await db.query('SELECT * FROM commesse WHERE id = ?', [commessaId]);
     if (commessa.length === 0) {
       return res.status(404).send("Commessa non trovata.");
     }
     
     // Elimina le associazioni esistenti
-    await db.promise().query('DELETE FROM Commesse_Componenti WHERE commessa_id = ?', [commessaId]);
+    await db.query('DELETE FROM Commesse_Componenti WHERE commessa_id = ?', [commessaId]);
     
     // Inserisci le nuove associazioni
     const insertSql = `
@@ -249,7 +249,7 @@ router.put('/commesse/:commessaId/componenti', async (req, res) => {
       if (!componente_id || !tipo_associato) {
         return res.status(400).send("Ogni oggetto deve contenere componente_id e tipo_associato.");
       }
-      await db.promise().query(insertSql, [commessaId, componente_id, tipo_associato]);
+      await db.query(insertSql, [commessaId, componente_id, tipo_associato]);
     }
     
     res.status(200).json({ message: "Componenti associati aggiornati con successo alla commessa." });

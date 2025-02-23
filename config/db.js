@@ -1,11 +1,11 @@
 const mysql = require("mysql2/promise");
 
 const db = mysql.createPool({
-  host: "217.154.6.43",  // IP del tuo VPS IONOS
-  user: "Tim3787",  // Il tuo nome utente MySQL
-  password: "rRRhrhry8883j@5ddw_!",  // La password corretta
-  database: "gestione_commesse",  // Il nome del tuo database
-  port: 3306,  // Porta predefinita per MySQL
+  host: process.env.DB_HOST,
+  user: process.env.DB_USER,
+  password: process.env.DB_PASS,
+  database: process.env.DB_NAME,
+  port: process.env.DB_PORT || 3306,
   timezone: "Z",  // Forza UTC
 });
 

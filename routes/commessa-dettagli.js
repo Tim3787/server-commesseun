@@ -193,6 +193,26 @@ router.put('/commesse/:commessaId/macchine', async (req, res) => {
 // ASSOCIAZIONI: COMMESSE E COMPONENTI CON TIPO ASSOCIATO
 // ------------------------------------------------------------------
 
+// GET: Recupera i componenti associati a una commessa
+router.get('/commesse/:commessaId/componenti', async (req, res) => {
+  const { commessaId } = req.params;
+  try {
+    // Verifica se la commessa esiste
+    const [commessa] = await db.query('SELECT * FROM commesse WHERE id = ?', [commessaId]);
+    if (commessa.length === 0) {
+      return res.status(404).send("Commessa non trovata.");
+    }
+
+    // Recupera le associazioni dalla tabella Commesse_Componenti
+    const [componenti] = await db.query('SELECT * FROM Commesse_Componenti WHERE commessa_id = ?', [commessaId]);
+    res.status(200).json(componenti);
+  } catch (err) {
+    console.error("Errore nel recupero dei componenti associati:", err);
+    res.status(500).send("Errore nel recupero dei componenti associati.");
+  }
+});
+
+
 // POST: Associa componenti a una commessa registrando il tipo specificato
 // Il body deve contenere un array di oggetti con "componente_id" e "tipo_associato"
 router.post('/commesse/:commessaId/componenti', async (req, res) => {
@@ -271,5 +291,34 @@ router.put('/commesse/:commessaId/componenti', async (req, res) => {
     res.status(500).send("Errore durante l'aggiornamento dei componenti associati.");
   }
 });
+
+// DELETE: Rimuove un'associazione componente da una commessa
+router.delete('/commesse/:commessaId/componenti/:componenteId', async (req, res) => {
+  const { commessaId, componenteId } = req.params;
+  try {
+    // Verifica se la commessa esiste
+    const [commessa] = await db.query('SELECT * FROM commesse WHERE id = ?', [commessaId]);
+    if (commessa.length === 0) {
+      return res.status(404).send("Commessa non trovata.");
+    }
+
+    // Esegue la cancellazione dell'associazione
+    const result = await db.query(
+      'DELETE FROM Commesse_Componenti WHERE commessa_id = ? AND componente_id = ?',
+      [commessaId, componenteId]
+    );
+
+    // Se nessuna riga è stata eliminata, l'associazione non esiste
+    if (result.affectedRows === 0) {
+      return res.status(404).send("Associazione componente non trovata.");
+    }
+
+    res.status(200).json({ message: "Associazione componente eliminata con successo." });
+  } catch (err) {
+    console.error("Errore durante la rimozione dell'associazione componente:", err);
+    res.status(500).send("Errore durante la rimozione dell'associazione componente.");
+  }
+});
+
 
 module.exports = router;

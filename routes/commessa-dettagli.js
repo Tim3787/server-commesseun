@@ -59,19 +59,20 @@ router.put('/macchine/:id', async (req, res) => {
 
 // POST: Aggiungi un nuovo componente
 router.post('/componenti', async (req, res) => {
-  const { nome_componente, macchina_id, tipo } = req.body;
-  if (!nome_componente || !macchina_id || !tipo) {
-    return res.status(400).send("I campi nome_componente, macchina_id e tipo sono obbligatori.");
+  const { nome_componente, macchina, tipo } = req.body;
+  if (!nome_componente || !macchina || !tipo) {
+    return res.status(400).send("I campi nome_componente, macchina e tipo sono obbligatori.");
   }
   try {
-    const insertSql = `INSERT INTO Componenti (componente, macchina_id, tipo) VALUES (?, ?, ?)`;
-    const [result] = await db.query(insertSql, [nome_componente, macchina_id, tipo]);
+    const insertSql = `INSERT INTO Componenti (componente, macchina, tipo) VALUES (?, ?, ?)`;
+    const [result] = await db.query(insertSql, [nome_componente, macchina, tipo]);
     res.status(201).json({ message: "Componente aggiunto con successo.", componenteId: result.insertId });
   } catch (err) {
     console.error("Errore durante l'aggiunta del componente:", err);
     res.status(500).send("Errore durante l'aggiunta del componente.");
   }
 });
+
 
 // GET: Recupera tutti i componenti
 router.get('/componenti', async (req, res) => {
@@ -87,19 +88,20 @@ router.get('/componenti', async (req, res) => {
 // PUT: Aggiorna un componente per ID
 router.put('/componenti/:id', async (req, res) => {
   const { id } = req.params;
-  const { nome_componente, macchina_id, tipo } = req.body;
-  if (!nome_componente || !macchina_id || !tipo) {
-    return res.status(400).send("I campi nome_componente, macchina_id e tipo sono obbligatori per l'aggiornamento.");
+  const { nome_componente, macchina, tipo } = req.body;
+  if (!nome_componente || !macchina || !tipo) {
+    return res.status(400).send("I campi nome_componente, macchina e tipo sono obbligatori per l'aggiornamento.");
   }
   try {
-    const updateSql = `UPDATE Componenti SET componente = ?, macchina_id = ?, tipo = ? WHERE id = ?`;
-    await db.query(updateSql, [nome_componente, macchina_id, tipo, id]);
+    const updateSql = `UPDATE Componenti SET componente = ?, macchina = ?, tipo = ? WHERE id = ?`;
+    await db.query(updateSql, [nome_componente, macchina, tipo, id]);
     res.status(200).json({ message: "Componente aggiornato con successo." });
   } catch (err) {
     console.error("Errore durante l'aggiornamento del componente:", err);
     res.status(500).send("Errore durante l'aggiornamento del componente.");
   }
 });
+
 
 
 // ------------------------------------------------------------------

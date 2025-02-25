@@ -197,13 +197,15 @@ router.put('/commesse/:commessaId/macchine', async (req, res) => {
 router.get('/commesse/:commessaId/componenti', async (req, res) => {
   const { commessaId } = req.params;
   try {
+    console.log(`Recupero componenti per la commessa ${commessaId}...`);
+
     // Verifica se la commessa esiste
     const [commessa] = await db.query('SELECT * FROM commesse WHERE id = ?', [commessaId]);
     if (commessa.length === 0) {
       return res.status(404).send("Commessa non trovata.");
     }
 
-    // Recupera i componenti associati alla commessa unendo i dati della tabella Componenti
+    // Recupera i componenti associati alla commessa con il JOIN
     const [componenti] = await db.query(`
       SELECT cc.commessa_id, cc.componente_id, c.nome_componente, c.macchina, cc.tipo_associato
       FROM Commesse_Componenti cc
@@ -211,12 +213,15 @@ router.get('/commesse/:commessaId/componenti', async (req, res) => {
       WHERE cc.commessa_id = ?
     `, [commessaId]);
 
+    console.log("Componenti trovati:", componenti);
+    
     res.status(200).json(componenti);
   } catch (err) {
     console.error("Errore nel recupero dei componenti associati:", err);
-    res.status(500).send("Errore nel recupero dei componenti associati.");
+    res.status(500).json({ error: "Errore nel recupero dei componenti associati.", details: err.message });
   }
 });
+
 
 
 // POST: Associa componenti a una commessa registrando il tipo specificato

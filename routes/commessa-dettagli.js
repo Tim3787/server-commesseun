@@ -193,6 +193,36 @@ router.put('/commesse/:commessaId/macchine', async (req, res) => {
 // ASSOCIAZIONI: COMMESSE E COMPONENTI CON TIPO ASSOCIATO
 // ------------------------------------------------------------------
 
+// GET: Recupera i componenti associati a una commessa
+router.get('/commesse/:commessaId/componenti', async (req, res) => {
+  const { commessaId } = req.params;
+  try {
+    console.log(`Recupero componenti per la commessa ${commessaId}...`);
+
+    // Verifica se la commessa esiste
+    const [commessa] = await db.query('SELECT * FROM commesse WHERE id = ?', [commessaId]);
+    if (commessa.length === 0) {
+      return res.status(404).send("Commessa non trovata.");
+    }
+
+    // Recupera i componenti associati alla commessa con il JOIN
+    const [componenti] = await db.query(`
+      SELECT cc.commessa_id, cc.componente_id, c.componente, c.macchina, cc.tipo_associato
+      FROM Commesse_Componenti cc
+      JOIN Componenti c ON cc.componente_id = c.id
+      WHERE cc.commessa_id = ?
+    `, [commessaId]);
+
+    console.log("Componenti trovati:", componenti);
+    
+    res.status(200).json(componenti);
+  } catch (err) {
+    console.error("Errore nel recupero dei componenti associati:", err);
+    res.status(500).json({ error: "Errore nel recupero dei componenti associati.", details: err.message });
+  }
+});
+
+
 // GET: Recupera i componenti associati a una commessa e a una specifica macchina
 router.get('/commesse/:commessaId/macchine/:macchinaId/componenti', async (req, res) => {
   const { commessaId, macchinaId } = req.params;
@@ -200,6 +230,19 @@ router.get('/commesse/:commessaId/macchine/:macchinaId/componenti', async (req, 
   try {
     console.log(`Recupero componenti per la commessa ${commessaId} e la macchina ${macchinaId}...`);
 
+    // Verifica che la commessa esista
+    const [commessa] = await db.query('SELECT id FROM commesse WHERE id = ?', [commessaId]);
+    if (commessa.length === 0) {
+      return res.status(404).json({ error: "Commessa non trovata." });
+    }
+
+    // Verifica che la macchina esista
+    const [macchina] = await db.query('SELECT id FROM Macchine WHERE id = ?', [macchinaId]);
+    if (macchina.length === 0) {
+      return res.status(404).json({ error: "Macchina non trovata." });
+    }
+
+    // Recupera i componenti associati alla commessa e alla macchina
     const [componenti] = await db.query(`
       SELECT cc.commessa_id, cc.macchina_id, cc.componente_id, c.componente, cc.tipo_associato
       FROM Commesse_Componenti cc

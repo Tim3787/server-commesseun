@@ -193,28 +193,20 @@ router.put('/commesse/:commessaId/macchine', async (req, res) => {
 // ASSOCIAZIONI: COMMESSE E COMPONENTI CON TIPO ASSOCIATO
 // ------------------------------------------------------------------
 
-// GET: Recupera i componenti associati a una commessa
-router.get('/commesse/:commessaId/componenti', async (req, res) => {
-  const { commessaId } = req.params;
+// GET: Recupera i componenti associati a una commessa e a una specifica macchina
+router.get('/commesse/:commessaId/macchine/:macchinaId/componenti', async (req, res) => {
+  const { commessaId, macchinaId } = req.params;
+  
   try {
-    console.log(`Recupero componenti per la commessa ${commessaId}...`);
+    console.log(`Recupero componenti per la commessa ${commessaId} e la macchina ${macchinaId}...`);
 
-    // Verifica se la commessa esiste
-    const [commessa] = await db.query('SELECT * FROM commesse WHERE id = ?', [commessaId]);
-    if (commessa.length === 0) {
-      return res.status(404).send("Commessa non trovata.");
-    }
-
-    // Recupera i componenti associati alla commessa con il JOIN
     const [componenti] = await db.query(`
-      SELECT cc.commessa_id, cc.componente_id, c.componente, c.macchina, cc.tipo_associato
+      SELECT cc.commessa_id, cc.macchina_id, cc.componente_id, c.componente, cc.tipo_associato
       FROM Commesse_Componenti cc
       JOIN Componenti c ON cc.componente_id = c.id
-      WHERE cc.commessa_id = ?
-    `, [commessaId]);
+      WHERE cc.commessa_id = ? AND cc.macchina_id = ?
+    `, [commessaId, macchinaId]);
 
-    console.log("Componenti trovati:", componenti);
-    
     res.status(200).json(componenti);
   } catch (err) {
     console.error("Errore nel recupero dei componenti associati:", err);
@@ -223,54 +215,15 @@ router.get('/commesse/:commessaId/componenti', async (req, res) => {
 });
 
 
-
 // POST: Associa componenti a una commessa registrando il tipo specificato
 // Il body deve contenere un array di oggetti con "componente_id" e "tipo_associato"
+// POST: Associa componenti a una commessa registrando il tipo specificato
 router.post('/commesse/:commessaId/componenti', async (req, res) => {
   const { commessaId } = req.params;
-  const { componenti } = req.body; // array di oggetti { componente_id, tipo_associato }
+  const { componenti } = req.body; // array di oggetti { macchina_id, componente_id, tipo_associato }
 
   if (!componenti || !Array.isArray(componenti) || componenti.length === 0) {
-    return res.status(400).send("Devi fornire un array di componenti con componente_id e tipo_associato.");
-  }
-  
-  try {
-    // Verifica se la commessa esiste (lettura dalla tabella "commesse")
-    const [commessa] = await db.query('SELECT * FROM commesse WHERE id = ?', [commessaId]);
-    if (commessa.length === 0) {
-      return res.status(404).send("Commessa non trovata.");
-    }
-
-    // Inserisci le associazioni con il tipo specificato
-    const insertSql = `
-      INSERT INTO Commesse_Componenti (commessa_id, componente_id, tipo_associato)
-      VALUES (?, ?, ?)
-    `;
-    for (const comp of componenti) {
-      const { componente_id, tipo_associato } = comp;
-      if (!componente_id || !tipo_associato) {
-        return res.status(400).send("Ogni oggetto deve contenere componente_id e tipo_associato.");
-      }
-      await db.query(insertSql, [commessaId, componente_id, tipo_associato]);
-    }
-    
-    res.status(201).json({
-      message: "Componenti associati con successo alla commessa con i rispettivi tipi."
-    });
-  } catch (err) {
-    console.error("Errore durante l'associazione dei componenti:", err);
-    res.status(500).send("Errore durante l'associazione dei componenti alla commessa.");
-  }
-});
-  
-// PUT: Aggiorna i componenti associati a una commessa (sostituzione completa)
-// Il body deve contenere un array di oggetti con "componente_id" e "tipo_associato"
-router.put('/commesse/:commessaId/componenti', async (req, res) => {
-  const { commessaId } = req.params;
-  const { componenti } = req.body; // array di oggetti { componente_id, tipo_associato }
-
-  if (!componenti || !Array.isArray(componenti) || componenti.length === 0) {
-    return res.status(400).send("Devi fornire un array di componenti con componente_id e tipo_associato.");
+    return res.status(400).send("Devi fornire un array di componenti con macchina_id, componente_id e tipo_associato.");
   }
   
   try {
@@ -279,33 +232,80 @@ router.put('/commesse/:commessaId/componenti', async (req, res) => {
     if (commessa.length === 0) {
       return res.status(404).send("Commessa non trovata.");
     }
-    
-    // Elimina le associazioni esistenti
-    await db.query('DELETE FROM Commesse_Componenti WHERE commessa_id = ?', [commessaId]);
-    
-    // Inserisci le nuove associazioni
+
+    // Query di inserimento con macchina_id incluso
     const insertSql = `
-      INSERT INTO Commesse_Componenti (commessa_id, componente_id, tipo_associato)
-      VALUES (?, ?, ?)
+      INSERT INTO Commesse_Componenti (commessa_id, macchina_id, componente_id, tipo_associato)
+      VALUES (?, ?, ?, ?)
     `;
+
     for (const comp of componenti) {
-      const { componente_id, tipo_associato } = comp;
-      if (!componente_id || !tipo_associato) {
-        return res.status(400).send("Ogni oggetto deve contenere componente_id e tipo_associato.");
+      const { macchina_id, componente_id, tipo_associato } = comp;
+
+      // Controllo se tutti i valori richiesti sono presenti
+      if (!macchina_id || !componente_id || !tipo_associato) {
+        return res.status(400).send("Ogni oggetto deve contenere macchina_id, componente_id e tipo_associato.");
       }
-      await db.query(insertSql, [commessaId, componente_id, tipo_associato]);
+
+      // Inserimento nel database
+      await db.query(insertSql, [commessaId, macchina_id, componente_id, tipo_associato]);
     }
     
-    res.status(200).json({ message: "Componenti associati aggiornati con successo alla commessa." });
+    res.status(201).json({
+      message: "Componenti associati con successo alla commessa con i rispettivi tipi e macchine."
+    });
+  } catch (err) {
+    console.error("Errore durante l'associazione dei componenti:", err);
+    res.status(500).send("Errore durante l'associazione dei componenti alla commessa.");
+  }
+});
+
+/// PUT: Aggiorna i componenti associati a una commessa (sostituzione completa)
+router.put('/commesse/:commessaId/componenti', async (req, res) => {
+  const { commessaId } = req.params;
+  const { componenti } = req.body; // array di oggetti { macchina_id, componente_id, tipo_associato }
+
+  if (!componenti || !Array.isArray(componenti) || componenti.length === 0) {
+    return res.status(400).send("Devi fornire un array di componenti con macchina_id, componente_id e tipo_associato.");
+  }
+  
+  try {
+    // Verifica se la commessa esiste
+    const [commessa] = await db.query('SELECT * FROM commesse WHERE id = ?', [commessaId]);
+    if (commessa.length === 0) {
+      return res.status(404).send("Commessa non trovata.");
+    }
+
+    // Elimina le associazioni esistenti per la commessa
+    await db.query('DELETE FROM Commesse_Componenti WHERE commessa_id = ?', [commessaId]);
+    
+    // Inserisci le nuove associazioni con macchina_id incluso
+    const insertSql = `
+      INSERT INTO Commesse_Componenti (commessa_id, macchina_id, componente_id, tipo_associato)
+      VALUES (?, ?, ?, ?)
+    `;
+
+    for (const comp of componenti) {
+      const { macchina_id, componente_id, tipo_associato } = comp;
+
+      if (!macchina_id || !componente_id || !tipo_associato) {
+        return res.status(400).send("Ogni oggetto deve contenere macchina_id, componente_id e tipo_associato.");
+      }
+
+      await db.query(insertSql, [commessaId, macchina_id, componente_id, tipo_associato]);
+    }
+    
+    res.status(200).json({ message: "Componenti aggiornati con successo alla commessa." });
   } catch (err) {
     console.error("Errore durante l'aggiornamento dei componenti associati:", err);
     res.status(500).send("Errore durante l'aggiornamento dei componenti associati.");
   }
 });
 
-// DELETE: Rimuove un'associazione componente da una commessa
-router.delete('/commesse/:commessaId/componenti/:componenteId', async (req, res) => {
-  const { commessaId, componenteId } = req.params;
+// DELETE: Rimuove un'associazione componente da una commessa e da una macchina specifica
+router.delete('/commesse/:commessaId/macchine/:macchinaId/componenti/:componenteId', async (req, res) => {
+  const { commessaId, macchinaId, componenteId } = req.params;
+  
   try {
     // Verifica se la commessa esiste
     const [commessa] = await db.query('SELECT * FROM commesse WHERE id = ?', [commessaId]);
@@ -315,11 +315,10 @@ router.delete('/commesse/:commessaId/componenti/:componenteId', async (req, res)
 
     // Esegue la cancellazione dell'associazione
     const result = await db.query(
-      'DELETE FROM Commesse_Componenti WHERE commessa_id = ? AND componente_id = ?',
-      [commessaId, componenteId]
+      'DELETE FROM Commesse_Componenti WHERE commessa_id = ? AND macchina_id = ? AND componente_id = ?',
+      [commessaId, macchinaId, componenteId]
     );
 
-    // Se nessuna riga è stata eliminata, l'associazione non esiste
     if (result.affectedRows === 0) {
       return res.status(404).send("Associazione componente non trovata.");
     }

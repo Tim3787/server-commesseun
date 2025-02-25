@@ -203,8 +203,14 @@ router.get('/commesse/:commessaId/componenti', async (req, res) => {
       return res.status(404).send("Commessa non trovata.");
     }
 
-    // Recupera le associazioni dalla tabella Commesse_Componenti
-    const [componenti] = await db.query('SELECT * FROM Commesse_Componenti WHERE commessa_id = ?', [commessaId]);
+    // Recupera i componenti associati alla commessa unendo i dati della tabella Componenti
+    const [componenti] = await db.query(`
+      SELECT cc.commessa_id, cc.componente_id, c.nome_componente, c.macchina, cc.tipo_associato
+      FROM Commesse_Componenti cc
+      JOIN Componenti c ON cc.componente_id = c.id
+      WHERE cc.commessa_id = ?
+    `, [commessaId]);
+
     res.status(200).json(componenti);
   } catch (err) {
     console.error("Errore nel recupero dei componenti associati:", err);

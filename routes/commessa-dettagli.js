@@ -112,17 +112,28 @@ router.put('/componenti/:id', async (req, res) => {
 // POST: Associa macchine a una commessa (inserimento in Commesse_Dettagli)
 router.post('/commesse/:commessaId/macchine', async (req, res) => {
   const { commessaId } = req.params;
-  const { macchina_ids } = req.body; // array di ID delle macchine
-  if (!macchina_ids || !Array.isArray(macchina_ids) || macchina_ids.length === 0) {
+  let { macchina_ids } = req.body; // si aspetta un array di ID delle macchine
+
+  // Se macchina_ids non è un array, lo trasformiamo in array
+  if (!Array.isArray(macchina_ids)) {
+    macchina_ids = [macchina_ids];
+  }
+
+  if (macchina_ids.length === 0) {
     return res.status(400).send("Il campo macchina_ids è obbligatorio e deve contenere almeno una macchina.");
   }
+
   try {
-    // Verifica se la commessa esiste (lettura dalla tabella "commesse")
+    // Verifica se la commessa esiste
     const [commessa] = await db.query('SELECT * FROM commesse WHERE id = ?', [commessaId]);
     if (commessa.length === 0) {
       return res.status(404).send("Commessa non trovata.");
     }
-    // Inserisci le associazioni in Commesse_Dettagli
+    
+    // Elimina tutte le associazioni esistenti per la commessa
+    await db.query('DELETE FROM Commesse_Dettagli WHERE commessa_id = ?', [commessaId]);
+
+    // Inserisci le nuove associazioni
     const insertSql = `INSERT INTO Commesse_Dettagli (commessa_id, macchina_id) VALUES (?, ?)`;
     for (const macchinaId of macchina_ids) {
       await db.query(insertSql, [commessaId, macchinaId]);

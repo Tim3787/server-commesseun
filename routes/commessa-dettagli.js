@@ -207,7 +207,7 @@ router.get('/commesse/:commessaId/componenti', async (req, res) => {
 
     // Recupera i componenti associati alla commessa con il JOIN
     const [componenti] = await db.query(`
-      SELECT cc.commessa_id, cc.componente_id, c.nome_componente, c.macchina, cc.tipo_associato
+      SELECT cc.commessa_id, cc.componente_id, c.componente, c.macchina, cc.tipo_associato
       FROM Commesse_Componenti cc
       JOIN Componenti c ON cc.componente_id = c.id
       WHERE cc.commessa_id = ?

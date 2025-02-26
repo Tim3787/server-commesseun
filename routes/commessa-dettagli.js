@@ -374,4 +374,94 @@ router.delete('/commesse/:commessaId/macchine/:macchinaId/componenti/:componente
 });
 
 
+// POST: Associa componenti a una macchina specifica all'interno di una commessa
+router.post('/commesse/:commessaId/macchine/:macchinaId/componenti', async (req, res) => {
+  const { commessaId, macchinaId } = req.params;
+  const { componenti } = req.body; // Array di oggetti { componente_id, tipo_associato }
+
+  if (!componenti || !Array.isArray(componenti) || componenti.length === 0) {
+    return res.status(400).send("Devi fornire un array di componenti con componente_id e tipo_associato.");
+  }
+  
+  try {
+    // Verifica che la commessa esista
+    const [commessa] = await db.query('SELECT * FROM commesse WHERE id = ?', [commessaId]);
+    if (commessa.length === 0) {
+      return res.status(404).send("Commessa non trovata.");
+    }
+
+    // Verifica che la macchina esista
+    const [macchina] = await db.query('SELECT * FROM Macchine WHERE id = ?', [macchinaId]);
+    if (macchina.length === 0) {
+      return res.status(404).send("Macchina non trovata.");
+    }
+
+    // Inserisci le associazioni con macchina_id incluso
+    const insertSql = `
+      INSERT INTO Commesse_Componenti (commessa_id, macchina_id, componente_id, tipo_associato)
+      VALUES (?, ?, ?, ?)
+    `;
+    for (const comp of componenti) {
+      const { componente_id, tipo_associato } = comp;
+      if (!componente_id || !tipo_associato) {
+        return res.status(400).send("Ogni oggetto deve contenere componente_id e tipo_associato.");
+      }
+      await db.query(insertSql, [commessaId, macchinaId, componente_id, tipo_associato]);
+    }
+    
+    res.status(201).json({
+      message: "Componenti associati con successo alla macchina della commessa."
+    });
+  } catch (err) {
+    console.error("Errore durante l'associazione dei componenti:", err);
+    res.status(500).send("Errore durante l'associazione dei componenti alla macchina.");
+  }
+});
+
+// PUT: Aggiorna i componenti associati a una macchina specifica di una commessa (sostituzione completa)
+// Il payload atteso è un array di oggetti: [{ componente_id: X, tipo_associato: "Y" }, ...]
+router.put('/commesse/:commessaId/macchine/:macchinaId/componenti', async (req, res) => {
+  const { commessaId, macchinaId } = req.params;
+  const { componenti } = req.body; // Array di oggetti { componente_id, tipo_associato }
+
+  if (!componenti || !Array.isArray(componenti) || componenti.length === 0) {
+    return res.status(400).send("Devi fornire un array di componenti con componente_id e tipo_associato.");
+  }
+  
+  try {
+    // Verifica che la commessa esista
+    const [commessa] = await db.query('SELECT * FROM commesse WHERE id = ?', [commessaId]);
+    if (commessa.length === 0) {
+      return res.status(404).send("Commessa non trovata.");
+    }
+
+    // Verifica che la macchina esista
+    const [macchina] = await db.query('SELECT * FROM Macchine WHERE id = ?', [macchinaId]);
+    if (macchina.length === 0) {
+      return res.status(404).send("Macchina non trovata.");
+    }
+
+    // Elimina le associazioni esistenti per quella commessa e macchina
+    await db.query('DELETE FROM Commesse_Componenti WHERE commessa_id = ? AND macchina_id = ?', [commessaId, macchinaId]);
+
+    // Inserisci le nuove associazioni
+    const insertSql = `
+      INSERT INTO Commesse_Componenti (commessa_id, macchina_id, componente_id, tipo_associato)
+      VALUES (?, ?, ?, ?)
+    `;
+    for (const comp of componenti) {
+      const { componente_id, tipo_associato } = comp;
+      if (!componente_id || !tipo_associato) {
+        return res.status(400).send("Ogni oggetto deve contenere componente_id e tipo_associato.");
+      }
+      await db.query(insertSql, [commessaId, macchinaId, componente_id, tipo_associato]);
+    }
+    
+    res.status(200).json({ message: "Componenti aggiornati con successo per la macchina." });
+  } catch (err) {
+    console.error("Errore durante l'aggiornamento dei componenti della macchina:", err);
+    res.status(500).send("Errore durante l'aggiornamento dei componenti della macchina.");
+  }
+});
+
 module.exports = router;

@@ -171,6 +171,32 @@ router.put("/:id", async (req, res) => {
 
 
 
+// Endpoint per aggiornare solo la data_consegna di una commessa
+router.put("/:id/data-consegna", async (req, res) => {
+  const { id } = req.params;
+  const { data_consegna } = req.body;
+
+  if (!data_consegna) {
+    return res.status(400).send("Il campo 'data_consegna' è obbligatorio.");
+  }
+
+  try {
+    const [rows] = await db.query("SELECT id FROM commesse WHERE id = ?", [id]);
+    if (rows.length === 0) {
+      return res.status(404).send("Commessa non trovata.");
+    }
+
+    await db.query(
+      "UPDATE commesse SET data_consegna = ? WHERE id = ?",
+      [data_consegna, id]
+    );
+
+    res.status(200).send("Data di consegna aggiornata con successo.");
+  } catch (error) {
+    console.error("Errore durante l'aggiornamento della data_consegna:", error);
+    res.status(500).send("Errore durante l'aggiornamento della data_consegna.");
+  }
+});
 
 
 

@@ -74,13 +74,14 @@ router.get("/", async (req, res) => {
   ac.durata,
   ac.stato,
   ac.descrizione AS descrizione_attivita,
-   ac.note 
+   ac.note,
+   ac.included_weekends 
 FROM attivita_commessa ac
 JOIN commesse c ON ac.commessa_id = c.id
 LEFT JOIN risorse r ON ac.risorsa_id = r.id
 JOIN attivita ad ON ac.attivita_id = ad.id
 JOIN reparti rep ON ac.reparto_id = rep.id -- Associazione con la tabella reparti
-WHERE 1=1;
+WHERE 1=1
 `;
 
   const params = [];
@@ -106,8 +107,12 @@ WHERE 1=1;
   }
 
   try {
-    const [results] = await db.query(sql, params);
-    res.json(results);
+    const [rows] = await db.query(sql, params);
+const results = rows.map(a => ({
+  ...a,
+  includedWeekends: a.included_weekends || []
+}));
+res.json(results);
   } catch (err) {
     console.error("Errore durante il recupero delle attività assegnate:", err);
     res.status(500).send("Errore durante il recupero delle attività assegnate.");
@@ -126,6 +131,7 @@ router.post("/", getUserIdFromToken, async (req, res) => {
     durata,
     descrizione = "Nessuna descrizione fornita", // Valore predefinito
     stato,
+    includedWeekends
   } = req.body;
 
   if (!commessa_id || !reparto_id || !attivita_id || !risorsa_id || !data_inizio || !durata) {
@@ -163,9 +169,10 @@ router.post("/", getUserIdFromToken, async (req, res) => {
 
     // Inserisce l'attività
     const query = `
-      INSERT INTO attivita_commessa (commessa_id, reparto_id, risorsa_id, attivita_id, data_inizio, durata, descrizione, stato)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-    `;
+        INSERT INTO attivita_commessa
+    (commessa_id, reparto_id, risorsa_id, attivita_id, data_inizio, durata, descrizione, stato, included_weekends)
+  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+`;
     const [result] = await db.query(query, [
       commessa_id,
       reparto_id,
@@ -175,6 +182,7 @@ router.post("/", getUserIdFromToken, async (req, res) => {
       durata,
       descrizione,
       stato,
+      JSON.stringify(includedWeekends || [])
     ]);
 
     // Crea una notifica per l'utente responsabile
@@ -217,7 +225,7 @@ const formatDateForMySQL = (isoDate) => {
 // Modificare un'attività
 router.put("/:id", getUserIdFromToken, async (req, res) => {
   const { id } = req.params;
-  const { commessa_id, risorsa_id, attivita_id, data_inizio, durata, descrizione, stato } = req.body;
+  const { commessa_id, risorsa_id, attivita_id, data_inizio, durata, descrizione, stato, includedWeekends } = req.body;
 
   const formattedDataInizio = formatDateForMySQL(data_inizio);
 
@@ -242,10 +250,10 @@ router.put("/:id", getUserIdFromToken, async (req, res) => {
     // Aggiorna l'attività
     const sql = `
       UPDATE attivita_commessa 
-      SET commessa_id = ?, risorsa_id = ?, attivita_id = ?, data_inizio = ?, durata = ?, descrizione = ?, stato = ?
+      SET commessa_id = ?, risorsa_id = ?, attivita_id = ?, data_inizio = ?, durata = ?, descrizione = ?, stato = ?, included_weekends = ?
       WHERE id = ?
     `;
-    await db.query(sql, [commessa_id, risorsa_id, attivita_id, formattedDataInizio, durata, descrizione, stato, id]);
+    await db.query(sql, [commessa_id, risorsa_id, attivita_id, formattedDataInizio, durata, descrizione, stato, JSON.stringify(includedWeekends || []), id]);
 
     // Crea una notifica
     const message = `L'attività è stata modificata:

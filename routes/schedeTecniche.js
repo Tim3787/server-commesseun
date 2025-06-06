@@ -34,32 +34,24 @@ router.get("/", async (req, res) => {
 
 
 // 🔹 POST nuova scheda
+// 🔹 POST nuova scheda
 router.post("/", async (req, res) => {
   try {
-    const { commessa_id, tipo, titolo } = req.body;
+    const { commessa_id, tipo_id, titolo } = req.body;
 
-    // Controlla che i campi necessari ci siano
-    if (!commessa_id || !tipo || !titolo) {
+    if (!commessa_id || !tipo_id || !titolo) {
       return res.status(400).send("Dati mancanti");
     }
 
-    // Cerca l'id del tipo nella tabella TipiSchedaTecnica
-    const [tipoRows] = await db.query("SELECT id FROM TipiSchedaTecnica WHERE nome = ?", [tipo]);
-    if (tipoRows.length === 0) {
-      return res.status(400).send("Tipo scheda non valido");
-    }
-
-    const tipo_id = tipoRows[0].id;
-
-    // Inserisci la scheda tecnica
     const sql = `
       INSERT INTO SchedeTecniche (commessa_id, tipo_id, titolo, intestazione, contenuto, note)
       VALUES (?, ?, ?, JSON_OBJECT(), JSON_OBJECT(), "")
     `;
     const [result] = await db.query(sql, [commessa_id, tipo_id, titolo]);
 
+    // Recupera la nuova scheda creata, con nome tipo
     const [newScheda] = await db.query(
-      `SELECT s.id, s.commessa_id, t.nome as tipo, s.titolo
+      `SELECT s.id, s.commessa_id, t.codice as tipo, s.titolo
        FROM SchedeTecniche s
        JOIN TipiSchedaTecnica t ON s.tipo_id = t.id
        WHERE s.id = ?`,
@@ -72,6 +64,7 @@ router.post("/", async (req, res) => {
     res.status(500).send("Errore durante la creazione della scheda.");
   }
 });
+
 
 // 🔹 PUT aggiorna una scheda
 router.put("/:id", async (req, res) => {

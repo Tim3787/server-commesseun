@@ -28,10 +28,20 @@ router.get("/commesse/:commessaId/schede", async (req, res) => {
 router.get("/", async (req, res) => {
   try {
     const [results] = await db.query(`
-      SELECT s.id, s.commessa_id, t.nome AS tipo, s.titolo, s.intestazione, s.contenuto, s.note, s.data_modifica
-      FROM SchedeTecniche s
-      JOIN TipiSchedaTecnica t ON s.tipo_id = t.id
-      ORDER BY s.data_modifica DESC
+      SELECT 
+  s.id, 
+  s.commessa_id, 
+  c.numero_commessa,   -- ✅ questo viene dalla tabella commesse
+  t.nome AS tipo,      -- oppure t.codice se usi "codice" nel modello
+  s.titolo, 
+  s.intestazione, 
+  s.contenuto, 
+  s.note, 
+  s.data_modifica
+FROM SchedeTecniche s
+JOIN TipiSchedaTecnica t ON s.tipo_id = t.id
+JOIN Commesse c ON s.commessa_id = c.id
+ORDER BY s.data_modifica DESC;
     `);
     res.json(results);
   } catch (err) {

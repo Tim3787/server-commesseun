@@ -8,7 +8,7 @@ router.get("/commesse/:commessaId/schede", async (req, res) => {
   const { commessaId } = req.params;
   try {
     const [results] = await db.query(
-      `SELECT s.id, s.commessa_id, t.codice AS tipo, s.titolo, s.intestazione, s.contenuto, s.note, s.data_modifica
+      `SELECT s.id, s.commessa_id, t.nome AS tipo, s.titolo, s.intestazione, s.contenuto, s.note, s.data_modifica
        FROM SchedeTecniche s
        JOIN TipiSchedaTecnica t ON s.tipo_id = t.id
        WHERE s.commessa_id = ?
@@ -28,7 +28,7 @@ router.get("/commesse/:commessaId/schede", async (req, res) => {
 router.get("/", async (req, res) => {
   try {
     const [results] = await db.query(`
-      SELECT s.id, s.commessa_id, t.codice AS tipo, s.titolo, s.intestazione, s.contenuto, s.note, s.data_modifica
+      SELECT s.id, s.commessa_id, t.nome AS tipo, s.titolo, s.intestazione, s.contenuto, s.note, s.data_modifica
       FROM SchedeTecniche s
       JOIN TipiSchedaTecnica t ON s.tipo_id = t.id
       ORDER BY s.data_modifica DESC
@@ -59,7 +59,7 @@ router.post("/", async (req, res) => {
 
     // Recupera la nuova scheda creata, con nome tipo
     const [newScheda] = await db.query(
-      `SELECT s.id, s.commessa_id, t.codice as tipo, s.titolo
+      `SELECT s.id, s.commessa_id, t.nome as tipo, s.titolo
        FROM SchedeTecniche s
        JOIN TipiSchedaTecnica t ON s.tipo_id = t.id
        WHERE s.id = ?`,

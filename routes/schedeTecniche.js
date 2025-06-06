@@ -4,7 +4,7 @@ const db = require("../config/db");
 
 
 // 🔹 GET tutte le schede per una commessa
-router.get("/commesse/:commessaId/schede", async (req, res) => {
+router.get("/:commessaId/schede", async (req, res) => {
   const { commessaId } = req.params;
   try {
     const [results] = await db.query(
@@ -23,7 +23,6 @@ router.get("/commesse/:commessaId/schede", async (req, res) => {
 });
 
 
-// 🔹 GET tutte le schede tecniche
 // 🔹 GET tutte le schede tecniche con tipo leggibile
 router.get("/", async (req, res) => {
   try {
@@ -51,7 +50,6 @@ ORDER BY s.data_modifica DESC;
 });
 
 
-// 🔹 POST nuova scheda
 // 🔹 POST nuova scheda
 router.post("/", async (req, res) => {
   try {

@@ -7,7 +7,7 @@ router.get("/commesse/:commessaId/schede", async (req, res) => {
   const { commessaId } = req.params;
   try {
     const [results] = await db.query(
-      "SELECT * FROM SchedeTecniche WHERE commessa_id = ? ORDER BY data_modifica DESC",
+      "SELECT * FROM SchedaTecnica WHERE commessa_id = ? ORDER BY data_modifica DESC",
       [commessaId]
     );
     res.json(results);
@@ -43,8 +43,8 @@ router.post("/", async (req, res) => {
       return res.status(400).send("Dati mancanti");
     }
 
-    // Cerca l'id del tipo nella tabella TipiSchedeTecniche
-    const [tipoRows] = await db.query("SELECT id FROM TipiSchedeTecniche WHERE nome = ?", [tipo]);
+    // Cerca l'id del tipo nella tabella TipiSchedaTecnicha
+    const [tipoRows] = await db.query("SELECT id FROM TipiSchedaTecnicha WHERE nome = ?", [tipo]);
     if (tipoRows.length === 0) {
       return res.status(400).send("Tipo scheda non valido");
     }

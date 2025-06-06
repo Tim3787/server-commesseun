@@ -35,24 +35,40 @@ router.get("/", async (req, res) => {
 
 // 🔹 POST nuova scheda
 router.post("/", async (req, res) => {
-  const { commessa_id, tipo_id, titolo } = req.body;
+  try {
+    const { commessa_id, tipo, titolo } = req.body;
 
-if (!commessa_id || !tipo_id || !titolo) {
-  return res.status(400).send("Dati obbligatori mancanti.");
-}
+    // Controlla che i campi necessari ci siano
+    if (!commessa_id || !tipo || !titolo) {
+      return res.status(400).send("Dati mancanti");
+    }
 
-try {
-  const sql = `
-    INSERT INTO SchedeTecniche (commessa_id, tipo_id, titolo, intestazione, contenuto, note)
-    VALUES (?, ?, ?, JSON_OBJECT(), JSON_OBJECT(), "")
-  `;
-  const [result] = await db.query(sql, [commessa_id, tipo_id, titolo]);
+    // Cerca l'id del tipo nella tabella TipiSchedeTecniche
+    const [tipoRows] = await db.query("SELECT id FROM TipiSchedeTecniche WHERE nome = ?", [tipo]);
+    if (tipoRows.length === 0) {
+      return res.status(400).send("Tipo scheda non valido");
+    }
 
-    const [newScheda] = await db.query("SELECT * FROM SchedeTecniche WHERE id = ?", [result.insertId]);
+    const tipo_id = tipoRows[0].id;
+
+    // Inserisci la scheda tecnica
+    const sql = `
+      INSERT INTO SchedeTecniche (commessa_id, tipo_id, titolo, intestazione, contenuto, note)
+      VALUES (?, ?, ?, JSON_OBJECT(), JSON_OBJECT(), "")
+    `;
+    const [result] = await db.query(sql, [commessa_id, tipo_id, titolo]);
+
+    const [newScheda] = await db.query(
+      `SELECT s.id, s.commessa_id, t.nome as tipo, s.titolo
+       FROM SchedeTecniche s
+       JOIN TipiSchedeTecniche t ON s.tipo_id = t.id
+       WHERE s.id = ?`,
+      [result.insertId]
+    );
+
     res.status(201).json(newScheda[0]);
   } catch (err) {
     console.error("Errore durante la creazione della scheda:", err.message);
-    console.error(err);
     res.status(500).send("Errore durante la creazione della scheda.");
   }
 });

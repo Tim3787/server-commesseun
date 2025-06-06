@@ -43,8 +43,8 @@ router.post("/", async (req, res) => {
       return res.status(400).send("Dati mancanti");
     }
 
-    // Cerca l'id del tipo nella tabella TipiSchedaTecnicha
-    const [tipoRows] = await db.query("SELECT id FROM TipiSchedaTecnicha WHERE nome = ?", [tipo]);
+    // Cerca l'id del tipo nella tabella TipiSchedaTecnica
+    const [tipoRows] = await db.query("SELECT id FROM TipiSchedaTecnica WHERE nome = ?", [tipo]);
     if (tipoRows.length === 0) {
       return res.status(400).send("Tipo scheda non valido");
     }
@@ -61,7 +61,7 @@ router.post("/", async (req, res) => {
     const [newScheda] = await db.query(
       `SELECT s.id, s.commessa_id, t.nome as tipo, s.titolo
        FROM SchedeTecniche s
-       JOIN TipiSchedaTecnicha t ON s.tipo_id = t.id
+       JOIN TipiSchedaTecnica t ON s.tipo_id = t.id
        WHERE s.id = ?`,
       [result.insertId]
     );

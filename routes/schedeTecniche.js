@@ -2,32 +2,40 @@ const express = require("express");
 const router = express.Router();
 const db = require("../config/db");
 
+
 // 🔹 GET tutte le schede per una commessa
 router.get("/commesse/:commessaId/schede", async (req, res) => {
   const { commessaId } = req.params;
   try {
     const [results] = await db.query(
-      "SELECT * FROM SchedaTecnica WHERE commessa_id = ? ORDER BY data_modifica DESC",
+      `SELECT s.id, s.commessa_id, t.codice AS tipo, s.titolo, s.intestazione, s.contenuto, s.note, s.data_modifica
+       FROM SchedeTecniche s
+       JOIN TipiSchedaTecnica t ON s.tipo_id = t.id
+       WHERE s.commessa_id = ?
+       ORDER BY s.data_modifica DESC`,
       [commessaId]
     );
     res.json(results);
   } catch (err) {
     console.error("Errore nel recupero delle schede:", err.message);
-    console.error(err);
     res.status(500).send("Errore nel recupero delle schede.");
   }
 });
 
+
 // 🔹 GET tutte le schede tecniche
+// 🔹 GET tutte le schede tecniche con tipo leggibile
 router.get("/", async (req, res) => {
   try {
     const [results] = await db.query(`
-      SELECT * FROM SchedeTecniche
+      SELECT s.id, s.commessa_id, t.codice AS tipo, s.titolo, s.intestazione, s.contenuto, s.note, s.data_modifica
+      FROM SchedeTecniche s
+      JOIN TipiSchedaTecnica t ON s.tipo_id = t.id
+      ORDER BY s.data_modifica DESC
     `);
     res.json(results);
   } catch (err) {
     console.error("Errore nel recupero di tutte le schede:", err.message);
-    console.error(err);
     res.status(500).send("Errore nel recupero delle schede.");
   }
 });

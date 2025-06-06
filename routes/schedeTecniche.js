@@ -164,19 +164,24 @@ router.get("/:id", async (req, res) => {
   }
 });
 
-router.get('/api/tipiSchedaTecnica', async (req, res) => {
+router.get('/tipiSchedaTecnica', async (req, res) => {
   const [tipi] = await db.query(`SELECT id, nome FROM TipiSchedaTecnica`);
   res.json(tipi);
 });
 
-router.post('/api/tipiSchedaTecnica', async (req, res) => {
+router.post('/tipiSchedaTecnica', async (req, res) => {
   const { nome } = req.body;
   const [result] = await db.query(
     `INSERT INTO TipiSchedaTecnica (nome) VALUES (?)`,
-    [codice]
+    [nome]
   );
   res.json({ id: result.insertId, nome });
 });
 
+router.delete('/tipiSchedaTecnica/:id', async (req, res) => {
+  const { id } = req.params;
+  await db.query(`DELETE FROM TipiSchedaTecnica WHERE id = ?`, [id]);
+  res.json({ success: true });
+});
 
 module.exports = router;

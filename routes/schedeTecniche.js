@@ -12,7 +12,8 @@ router.get("/commesse/:commessaId/schede", async (req, res) => {
     );
     res.json(results);
   } catch (err) {
-    console.error("Errore nel recupero delle schede:", err);
+    console.error("Errore nel recupero delle schede:", err.message);
+    console.error(err);
     res.status(500).send("Errore nel recupero delle schede.");
   }
 });
@@ -25,7 +26,8 @@ router.get("/", async (req, res) => {
     `);
     res.json(results);
   } catch (err) {
-    console.error("Errore nel recupero di tutte le schede:", err);
+    console.error("Errore nel recupero di tutte le schede:", err.message);
+    console.error(err);
     res.status(500).send("Errore nel recupero delle schede.");
   }
 });
@@ -49,7 +51,8 @@ try {
     const [newScheda] = await db.query("SELECT * FROM SchedeTecniche WHERE id = ?", [result.insertId]);
     res.status(201).json(newScheda[0]);
   } catch (err) {
-    console.error("Errore durante la creazione della scheda:", err);
+    console.error("Errore durante la creazione della scheda:", err.message);
+    console.error(err);
     res.status(500).send("Errore durante la creazione della scheda.");
   }
 });
@@ -88,7 +91,8 @@ router.put("/:id", async (req, res) => {
     res.send("Scheda aggiornata con successo.");
   } catch (err) {
     await conn.rollback();
-    console.error("Errore durante l'aggiornamento della scheda:", err);
+    console.error("Errore durante l'aggiornamento della scheda:", err.message);
+    console.error(err);
     res.status(500).send("Errore durante l'aggiornamento della scheda.");
   } finally {
     conn.release();
@@ -103,7 +107,8 @@ router.delete("/:id", async (req, res) => {
     await db.query("DELETE FROM SchedeTecniche WHERE id = ?", [id]);
     res.status(200).send("Scheda eliminata con successo.");
   } catch (err) {
-    console.error("Errore durante l'eliminazione della scheda:", err);
+    console.error("Errore durante l'eliminazione della scheda:", err.message);
+    console.error(err);
     res.status(500).send("Errore durante l'eliminazione della scheda.");
   }
 });
@@ -122,7 +127,8 @@ router.get("/:schedaId/modifiche", async (req, res) => {
 
     res.json(results);
   } catch (err) {
-    console.error("Errore nel recupero modifiche:", err);
+    console.error("Errore nel recupero modifiche:", err.message);
+    console.error(err);
     res.status(500).send("Errore nel recupero modifiche.");
   }
 });
@@ -135,7 +141,8 @@ router.get("/:id", async (req, res) => {
     if (results.length === 0) return res.status(404).send("Scheda non trovata.");
     res.json(results[0]);
   } catch (err) {
-    console.error("Errore nel recupero della scheda:", err);
+    console.error("Errore nel recupero della scheda:", err.message);
+    console.error(err);
     res.status(500).send("Errore nel recupero della scheda.");
   }
 });

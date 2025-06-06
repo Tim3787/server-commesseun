@@ -17,20 +17,34 @@ router.get("/commesse/:commessaId/schede", async (req, res) => {
   }
 });
 
+// 🔹 GET tutte le schede tecniche
+router.get("/", async (req, res) => {
+  try {
+    const [results] = await db.query(`
+      SELECT * FROM SchedeTecniche
+    `);
+    res.json(results);
+  } catch (err) {
+    console.error("Errore nel recupero di tutte le schede:", err);
+    res.status(500).send("Errore nel recupero delle schede.");
+  }
+});
+
+
 // 🔹 POST nuova scheda
 router.post("/schede", async (req, res) => {
-  const { commessa_id, tipo, titolo } = req.body;
+  const { commessa_id, tipo_id, titolo } = req.body;
 
-  if (!commessa_id || !tipo || !titolo) {
-    return res.status(400).send("Dati obbligatori mancanti.");
-  }
+if (!commessa_id || !tipo_id || !titolo) {
+  return res.status(400).send("Dati obbligatori mancanti.");
+}
 
-  try {
-    const sql = `
-      INSERT INTO SchedeTecniche (commessa_id, tipo, titolo, intestazione, contenuto, note)
-      VALUES (?, ?, ?, JSON_OBJECT(), JSON_OBJECT(), "")
-    `;
-    const [result] = await db.query(sql, [commessa_id, tipo, titolo]);
+try {
+  const sql = `
+    INSERT INTO SchedeTecniche (commessa_id, tipo_id, titolo, intestazione, contenuto, note)
+    VALUES (?, ?, ?, JSON_OBJECT(), JSON_OBJECT(), "")
+  `;
+  const [result] = await db.query(sql, [commessa_id, tipo_id, titolo]);
 
     const [newScheda] = await db.query("SELECT * FROM SchedeTecniche WHERE id = ?", [result.insertId]);
     res.status(201).json(newScheda[0]);
@@ -110,6 +124,19 @@ router.get("/:schedaId/modifiche", async (req, res) => {
   } catch (err) {
     console.error("Errore nel recupero modifiche:", err);
     res.status(500).send("Errore nel recupero modifiche.");
+  }
+});
+
+
+router.get("/schede/:id", async (req, res) => {
+  const { id } = req.params;
+  try {
+    const [results] = await db.query("SELECT * FROM SchedeTecniche WHERE id = ?", [id]);
+    if (results.length === 0) return res.status(404).send("Scheda non trovata.");
+    res.json(results[0]);
+  } catch (err) {
+    console.error("Errore nel recupero della scheda:", err);
+    res.status(500).send("Errore nel recupero della scheda.");
   }
 });
 

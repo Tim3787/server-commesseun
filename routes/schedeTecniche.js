@@ -32,7 +32,7 @@ router.get("/", async (req, res) => {
 
 
 // 🔹 POST nuova scheda
-router.post("/schede", async (req, res) => {
+router.post("/", async (req, res) => {
   const { commessa_id, tipo_id, titolo } = req.body;
 
 if (!commessa_id || !tipo_id || !titolo) {
@@ -55,7 +55,7 @@ try {
 });
 
 // 🔹 PUT aggiorna una scheda
-router.put("/schede/:id", async (req, res) => {
+router.put("/:id", async (req, res) => {
   const { id } = req.params;
   const { intestazione, contenuto, note, allegati_standard, risorsa_id, descrizione } = req.body;
 
@@ -97,7 +97,7 @@ router.put("/schede/:id", async (req, res) => {
 
 
 // 🔹 DELETE elimina una scheda
-router.delete("/schede/:id", async (req, res) => {
+router.delete("/:id", async (req, res) => {
   const { id } = req.params;
   try {
     await db.query("DELETE FROM SchedeTecniche WHERE id = ?", [id]);
@@ -128,7 +128,7 @@ router.get("/:schedaId/modifiche", async (req, res) => {
 });
 
 
-router.get("/schede/:id", async (req, res) => {
+router.get("/:id", async (req, res) => {
   const { id } = req.params;
   try {
     const [results] = await db.query("SELECT * FROM SchedeTecniche WHERE id = ?", [id]);

@@ -80,13 +80,13 @@ router.post("/", async (req, res) => {
 
     const [result] = await db.query(sql, [commessa_id, tipo_id, titoloDaInserire]);
 
-    const [newScheda] = await db.query(
-      `SELECT s.id, s.commessa_id, t.nome as tipo, s.titolo
-       FROM SchedeTecniche s
-       JOIN TipiSchedaTecnica t ON s.tipo_id = t.id
-       WHERE s.id = ?`,
-      [result.insertId]
-    );
+const [newScheda] = await db.query(
+  `SELECT s.id, s.commessa_id, s.tipo_id, t.nome as tipo, s.titolo
+   FROM SchedeTecniche s
+   JOIN TipiSchedaTecnica t ON s.tipo_id = t.id
+   WHERE s.id = ?`,
+  [result.insertId]
+);
 
     res.status(201).json(newScheda[0]);
   } catch (err) {

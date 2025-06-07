@@ -65,9 +65,9 @@ ORDER BY s.data_modifica DESC;
 // 🔹 POST nuova scheda
 router.post("/", async (req, res) => {
   try {
-    const { commessa_id, tipo_id, titolo } = req.body;
+    const { commessa_id, tipo_id } = req.body;
 
-    if (!commessa_id || !tipo_id || !titolo) {
+    if (!commessa_id || !tipo_id ) {
       return res.status(400).send("Dati mancanti");
     }
 

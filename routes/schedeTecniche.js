@@ -65,9 +65,9 @@ ORDER BY s.data_modifica DESC;
 // 🔹 POST nuova scheda
 router.post("/", async (req, res) => {
   try {
-    const { commessa_id, tipo_id } = req.body;
+    const { commessa_id, tipo_id, titolo } = req.body;
 
-    if (!commessa_id || !tipo_id ) {
+    if (!commessa_id || !tipo_id) {
       return res.status(400).send("Dati mancanti");
     }
 
@@ -75,9 +75,11 @@ router.post("/", async (req, res) => {
       INSERT INTO SchedeTecniche (commessa_id, tipo_id, titolo, intestazione, contenuto, note)
       VALUES (?, ?, ?, JSON_OBJECT(), JSON_OBJECT(), "")
     `;
-    const [result] = await db.query(sql, [commessa_id, tipo_id, titolo]);
 
-    // Recupera la nuova scheda creata, con nome tipo
+    const titoloDaInserire = titolo || ""; // se non c'è, metti stringa vuota
+
+    const [result] = await db.query(sql, [commessa_id, tipo_id, titoloDaInserire]);
+
     const [newScheda] = await db.query(
       `SELECT s.id, s.commessa_id, t.nome as tipo, s.titolo
        FROM SchedeTecniche s

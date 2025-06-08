@@ -9,11 +9,11 @@ router.get("/:commessaId/schede", async (req, res) => {
   try {
     const [results] = await db.query(
       `
-      SELECT 
+  SELECT 
   s.id, 
   s.commessa_id, 
-  c.numero_commessa,   -- ✅ questo viene dalla tabella commesse
-  t.nome AS tipo,      -- oppure t.codice se usi "codice" nel modello
+  c.numero_commessa,   
+  t.nome AS tipo,   
   s.titolo, 
   s.intestazione, 
   s.contenuto, 
@@ -24,9 +24,9 @@ router.get("/:commessaId/schede", async (req, res) => {
 FROM SchedeTecniche s
 JOIN TipiSchedaTecnica t ON s.tipo_id = t.id
 JOIN commesse c ON s.commessa_id = c.id
-JOIN commesse c ON s.commessa_id = c.id
+LEFT JOIN users u ON s.creata_da = u.id
 WHERE s.commessa_id = ?
-ORDER BY s.data_modifica DESC
+ORDER BY s.data_modifica DESC;
     `,
       [commessaId]
     );
@@ -42,10 +42,10 @@ ORDER BY s.data_modifica DESC
 router.get("/", async (req, res) => {
   try {
     const [results] = await db.query(`
-      SELECT 
+SELECT 
   s.id, 
   s.commessa_id, 
-  c.numero_commessa,   -
+  c.numero_commessa,   
   t.nome AS tipo,   
   s.titolo, 
   s.intestazione, 

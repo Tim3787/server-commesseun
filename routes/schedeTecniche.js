@@ -84,10 +84,12 @@ router.post("/", async (req, res) => {
 ]);
 
 const [newScheda] = await db.query(
-  `SELECT s.id, s.commessa_id, s.tipo_id, t.nome as tipo, s.titolo
-   FROM SchedeTecniche s
-   JOIN TipiSchedaTecnica t ON s.tipo_id = t.id
-   WHERE s.id = ?`,
+  `SELECT s.id, s.commessa_id, s.tipo_id, s.titolo, s.data_creazione, s.data_modifica,
+       s.creata_da, u.username as creato_da_nome, t.nome as tipo
+FROM SchedeTecniche s
+JOIN TipiSchedaTecnica t ON s.tipo_id = t.id
+LEFT JOIN users u ON s.creata_da = u.id
+WHERE s.id = ?`,
   [result.insertId]
 );
 

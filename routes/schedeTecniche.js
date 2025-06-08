@@ -144,13 +144,36 @@ router.put("/:id", async (req, res) => {
 // 🔹 DELETE elimina una scheda
 router.delete("/:id", async (req, res) => {
   const { id } = req.params;
+
+  const conn = await db.getConnection();
   try {
-    await db.query("DELETE FROM SchedeTecniche WHERE id = ?", [id]);
-    res.status(200).send("Scheda eliminata con successo.");
+    await conn.beginTransaction();
+
+    // 🔍 Recupera tutte le immagini associate
+    const [immagini] = await conn.query("SELECT url FROM SchedeImmagini WHERE scheda_id = ?", [id]);
+
+    // 🧹 Elimina i file fisici
+    for (const img of immagini) {
+      const imagePath = path.join(__dirname, "../../public", img.url);
+      if (fs.existsSync(imagePath)) {
+        fs.unlinkSync(imagePath);
+      }
+    }
+
+    // ❌ Elimina i record delle immagini
+    await conn.query("DELETE FROM SchedeImmagini WHERE scheda_id = ?", [id]);
+
+    // 🧨 Elimina la scheda
+    await conn.query("DELETE FROM SchedeTecniche WHERE id = ?", [id]);
+
+    await conn.commit();
+    res.status(200).send("Scheda e immagini eliminate con successo.");
   } catch (err) {
+    await conn.rollback();
     console.error("Errore durante l'eliminazione della scheda:", err.message);
-    console.error(err);
     res.status(500).send("Errore durante l'eliminazione della scheda.");
+  } finally {
+    conn.release();
   }
 });
 

@@ -19,6 +19,7 @@ router.get("/:commessaId/schede", async (req, res) => {
   s.contenuto, 
   s.note, 
   s.data_modifica
+   s.data_crezione
 FROM SchedeTecniche s
 JOIN TipiSchedaTecnica t ON s.tipo_id = t.id
 JOIN commesse c ON s.commessa_id = c.id
@@ -42,8 +43,8 @@ router.get("/", async (req, res) => {
       SELECT 
   s.id, 
   s.commessa_id, 
-  c.numero_commessa,   -- ✅ questo viene dalla tabella commesse
-  t.nome AS tipo,      -- oppure t.codice se usi "codice" nel modello
+  c.numero_commessa,   -
+  t.nome AS tipo,   
   s.titolo, 
   s.intestazione, 
   s.contenuto, 

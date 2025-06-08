@@ -18,7 +18,7 @@ router.get("/:commessaId/schede", async (req, res) => {
   s.intestazione, 
   s.contenuto, 
   s.note, 
-  s.data_modifica
+  s.data_modifica,
    s.data_creazione
 FROM SchedeTecniche s
 JOIN TipiSchedaTecnica t ON s.tipo_id = t.id

@@ -26,30 +26,33 @@ router.get("/tag", async (req, res) => {
 
 // POST /api/schedeTecniche/tags - aggiunge un nuovo tag per una scheda
 router.post("/tags", async (req, res) => {
-  const { scheda_id, tag } = req.body;
+  const { scheda_id, tags } = req.body;
+
+  if (!scheda_id || !Array.isArray(tags)) {
+    return res.status(400).json({ error: "scheda_id e array di tags sono obbligatori." });
+  }
+
   try {
-    if (!scheda_id || !tag) {
-      return res.status(400).json({ error: "scheda_id e tag sono obbligatori." });
+    for (const tag of tags) {
+      const [existing] = await db.query(
+        "SELECT * FROM SchedeTag WHERE scheda_id = ? AND tag = ?",
+        [scheda_id, tag]
+      );
+
+      if (existing.length === 0) {
+        await db.query(
+          "INSERT INTO SchedeTag (scheda_id, tag) VALUES (?, ?)",
+          [scheda_id, tag]
+        );
+      }
     }
 
-    // Verifica se esiste già
-    const [existing] = await db.query(
-      "SELECT * FROM SchedeTag WHERE scheda_id = ? AND tag = ?",
-      [scheda_id, tag]
-    );
-    if (existing.length > 0) {
-      return res.status(200).json({ message: "Tag già presente." });
-    }
-
-    // Inserisci
-    await db.query("INSERT INTO SchedeTag (scheda_id, tag) VALUES (?, ?)", [scheda_id, tag]);
     res.status(201).json({ success: true });
   } catch (err) {
-    console.error("Errore nel salvataggio del tag:", err);
-    res.status(500).json({ error: "Errore interno." });
+    console.error("Errore salvataggio tag:", err);
+    res.status(500).json({ error: "Errore interno durante il salvataggio dei tag." });
   }
 });
-
 
 // 🔹 GET tutte le schede per una commessa
 router.get("/:commessaId/schede", async (req, res) => {

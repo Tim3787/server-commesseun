@@ -77,14 +77,19 @@ router.post("/", async (req, res) => {
       return res.status(400).send("Dati mancanti");
     }
 
-    const sql = `
-      INSERT INTO SchedeTecniche (commessa_id, tipo_id,creata_da, titolo, intestazione, contenuto, note)
-      VALUES (?, ?, ?, JSON_OBJECT(), JSON_OBJECT(), "")
-    `;
+  const sql = `
+  INSERT INTO SchedeTecniche (commessa_id, tipo_id, creata_da, titolo, intestazione, contenuto, note)
+  VALUES (?, ?, ?, ?, JSON_OBJECT(), JSON_OBJECT(), "")
+`;
 
     const titoloDaInserire = titolo || ""; // se non c'è, metti stringa vuota
 
-    const [result] = await db.query(sql, [commessa_id, tipo_id, titoloDaInserire]);
+    const [result] = await db.query(sql, [
+  commessa_id,
+  tipo_id,
+  creata_da,
+  titoloDaInserire
+]);
 
 const [newScheda] = await db.query(
   `SELECT s.id, s.commessa_id, s.tipo_id, t.nome as tipo, s.titolo

@@ -70,5 +70,32 @@ router.get("/immagini/:scheda_id", async (req, res) => {
 });
 
 
+// DELETE /api/schede/immagini/:id
+router.delete("/immagini/:id", async (req, res) => {
+  const id = req.params.id;
+
+  try {
+    // 1. Recupera il percorso del file dal database
+    const [rows] = await pool.query("SELECT url FROM SchedeImmagini WHERE id = ?", [id]);
+    if (rows.length === 0) {
+      return res.status(404).json({ error: "Immagine non trovata" });
+    }
+
+    const imagePath = path.join(__dirname, "../../public", rows[0].url);
+
+    // 2. Elimina il file fisico, se esiste
+    if (fs.existsSync(imagePath)) {
+      fs.unlinkSync(imagePath);
+    }
+
+    // 3. Elimina il record dal database
+    await pool.query("DELETE FROM SchedeImmagini WHERE id = ?", [id]);
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error("Errore eliminazione immagine:", error);
+    res.status(500).json({ error: "Errore interno del server" });
+  }
+});
 
 module.exports = router;

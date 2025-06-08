@@ -24,44 +24,33 @@ const storage = multer.diskStorage({
 
 const upload = multer({ storage: storage });
 
-// 📤 Route per l'upload (es. /upload-image)
-router.post("/upload-image", upload.single("image"), (req, res) => {
-  if (!req.file) return res.status(400).json({ error: "Nessun file caricato" });
-
-  const fileUrl = `/uploads/${req.file.filename}`;
-
-  // Qui puoi anche salvare nel DB se serve
-
-  res.json({
-    success: true,
-    filename: req.file.filename,
-    url: fileUrl,
-  });
-});
-
+// 📤 Route upload con salvataggio nel DB
 router.post("/upload-image", upload.single("image"), async (req, res) => {
   if (!req.file) return res.status(400).json({ error: "Nessun file caricato" });
 
-  const { scheda_id } = req.body;
-  const filename = req.file.filename;
-  const url = `/uploads/${filename}`;
+  const { scheda_id, utente_upload } = req.body;
+  const nome_file = req.file.filename;
+  const url = `/uploads/${nome_file}`;
+  const timestamp_upload = new Date();
 
   try {
-    // Inserisci nel DB
-    await db.query(
-      "INSERT INTO SchedeImmagini (scheda_id, filename, url) VALUES (?, ?, ?)",
-      [scheda_id, filename, url]
+    const [result] = await db.execute(
+      `INSERT INTO SchedeImmagini (scheda_id, url, nome_file, utente_upload, timestamp_upload)
+       VALUES (?, ?, ?, ?, ?)`,
+      [scheda_id, url, nome_file, utente_upload || null, timestamp_upload]
     );
 
     res.json({
       success: true,
-      filename: filename,
-      url: url,
+      id: result.insertId,
+      filename: nome_file,
+      url,
     });
   } catch (err) {
-    console.error("Errore salvataggio immagine nel DB:", err);
-    res.status(500).json({ error: "Errore salvataggio immagine" });
+    console.error("Errore inserimento nel DB:", err);
+    res.status(500).json({ error: "Errore nel salvataggio nel database" });
   }
 });
+
 
 module.exports = router;

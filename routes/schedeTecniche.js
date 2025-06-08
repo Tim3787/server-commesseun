@@ -9,6 +9,22 @@ function estraiHashtag(testo) {
   return matches ? matches.map(tag => tag.substring(1)) : [];
 }
 
+
+// GET /api/schedeTecniche/tag - restituisce tutti i tag distinti usati nelle note
+router.get("/tag", async (req, res) => {
+  try {
+    const [rows] = await db.query(
+      "SELECT DISTINCT tag FROM SchedeTag ORDER BY tag ASC"
+    );
+    const tagList = rows.map(r => r.tag);
+    res.json(tagList);
+  } catch (err) {
+    console.error("Errore nel recupero dei tag:", err);
+    res.status(500).json({ error: "Errore nel recupero dei tag" });
+  }
+});
+
+
 // 🔹 GET tutte le schede per una commessa
 router.get("/:commessaId/schede", async (req, res) => {
   const { commessaId } = req.params;
@@ -296,19 +312,6 @@ router.get("/tag/:tag", async (req, res) => {
 });
 
 
-// GET /api/schedeTecniche/tag - restituisce tutti i tag distinti usati nelle note
-router.get("/tag", async (req, res) => {
-  try {
-    const [rows] = await db.query(
-      "SELECT DISTINCT tag FROM SchedeTag ORDER BY tag ASC"
-    );
-    const tagList = rows.map(r => r.tag);
-    res.json(tagList);
-  } catch (err) {
-    console.error("Errore nel recupero dei tag:", err);
-    res.status(500).json({ error: "Errore nel recupero dei tag" });
-  }
-});
 
 
 module.exports = router;

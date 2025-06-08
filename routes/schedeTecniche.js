@@ -43,7 +43,7 @@ router.get("/", async (req, res) => {
       FROM SchedeTecniche s
       JOIN TipiSchedaTecnica t ON s.tipo_id = t.id
       LEFT JOIN users u ON s.creata_da = u.id
-      ORDER BY s.data_modifica DESC,
+      ORDER BY s.data_modifica DESC
     `);
     res.json(results);
   } catch (err) {

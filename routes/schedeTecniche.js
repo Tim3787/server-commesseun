@@ -8,34 +8,16 @@ router.get("/:commessaId/schede", async (req, res) => {
   const { commessaId } = req.params;
   try {
     const [results] = await db.query(
-      `
-  SELECT 
-  s.id, 
-  s.commessa_id, 
-  c.numero_commessa,   
-  t.nome AS tipo,   
-  s.titolo, 
-  s.intestazione, 
-  s.contenuto, 
-  s.note, 
-  s.data_modifica,
-  s.data_creazione,
-  u.nome AS creato_da_nome
-FROM SchedeTecniche s
-JOIN TipiSchedaTecnica t ON s.tipo_id = t.id
-JOIN commesse c ON s.commessa_id = c.id
-LEFT JOIN users u ON s.creata_da = u.id
-WHERE s.commessa_id = ?
-ORDER BY s.data_modifica DESC;
-    `,
+      `SELECT * FROM SchedeTecniche WHERE commessa_id = ? ORDER BY data_modifica DESC`,
       [commessaId]
     );
-    res.json(results);
+    res.json(results); // se fallisce qui → è un problema di JSON
   } catch (err) {
     console.error("Errore nel recupero delle schede:", err.message);
     res.status(500).send("Errore nel recupero delle schede.");
   }
 });
+
 
 
 // 🔹 GET tutte le schede tecniche con tipo leggibile

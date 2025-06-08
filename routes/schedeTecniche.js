@@ -49,6 +49,7 @@ router.get("/", async (req, res) => {
   s.contenuto, 
   s.note, 
   s.data_modifica
+  s.data_creazione
 FROM SchedeTecniche s
 JOIN TipiSchedaTecnica t ON s.tipo_id = t.id
 JOIN commesse c ON s.commessa_id = c.id

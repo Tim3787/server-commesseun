@@ -6,6 +6,8 @@ const fs = require("fs");
 
 const router = express.Router();
 
+const db = require("../config/db");
+
 // 📦 Configura la cartella dove salvare le immagini
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
@@ -35,6 +37,31 @@ router.post("/upload-image", upload.single("image"), (req, res) => {
     filename: req.file.filename,
     url: fileUrl,
   });
+});
+
+router.post("/upload-image", upload.single("image"), async (req, res) => {
+  if (!req.file) return res.status(400).json({ error: "Nessun file caricato" });
+
+  const { scheda_id } = req.body;
+  const filename = req.file.filename;
+  const url = `/uploads/${filename}`;
+
+  try {
+    // Inserisci nel DB
+    await db.query(
+      "INSERT INTO SchedeImmagini (scheda_id, filename, url) VALUES (?, ?, ?)",
+      [scheda_id, filename, url]
+    );
+
+    res.json({
+      success: true,
+      filename: filename,
+      url: url,
+    });
+  } catch (err) {
+    console.error("Errore salvataggio immagine nel DB:", err);
+    res.status(500).json({ error: "Errore salvataggio immagine" });
+  }
 });
 
 module.exports = router;

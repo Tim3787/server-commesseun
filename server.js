@@ -18,15 +18,15 @@ const statoCommessaRoutes  = require("./routes/stato-commessa.js");
 const PrenotazioneSaleRoutes  = require("./routes/sale-riunioni.js");
 const CommessaDettagliRoutes  = require("./routes/commessa-dettagli.js");
 const schedeTecnicheRoutes = require('./routes/schedeTecniche');
+const uploadRoute = require("./routes/upload");
 
 const app = express();
 const cookieParser = require("cookie-parser");
 app.use(cookieParser());
 
-const uploadRoute = require("./routes/upload");
 
-app.use("/uploads", express.static("uploads")); // Per servire i file statici
-app.use("/api", uploadRoute); // Per gestire /api/upload-image
+
+
 
 
 // Connessione al database MySQL con variabili d'ambiente
@@ -63,6 +63,9 @@ app.use("/api/stato-commessa", statoCommessaRoutes);
 app.use("/api/sale-riunioni", PrenotazioneSaleRoutes);
 app.use("/api/commessa-dettagli", CommessaDettagliRoutes);
 app.use('/api/schedeTecniche', schedeTecnicheRoutes);
+
+app.use("/uploads", express.static("uploads")); // Per servire i file statici
+app.use("/api/upload", uploadRoute); // Per gestire /api/upload-image
 
 // Middleware di gestione degli errori
 app.use((err, req, res, next) => {

@@ -19,9 +19,11 @@ router.get("/:commessaId/schede", async (req, res) => {
   s.contenuto, 
   s.note, 
   s.data_modifica,
-   s.data_creazione
+  s.data_creazione,
+  u.nome AS creato_da_nome
 FROM SchedeTecniche s
 JOIN TipiSchedaTecnica t ON s.tipo_id = t.id
+JOIN commesse c ON s.commessa_id = c.id
 JOIN commesse c ON s.commessa_id = c.id
 WHERE s.commessa_id = ?
 ORDER BY s.data_modifica DESC
@@ -49,11 +51,13 @@ router.get("/", async (req, res) => {
   s.intestazione, 
   s.contenuto, 
   s.note, 
-  s.data_modifica
-  s.data_creazione
+  s.data_modifica,
+  s.data_creazione,
+  u.nome AS creato_da_nome
 FROM SchedeTecniche s
 JOIN TipiSchedaTecnica t ON s.tipo_id = t.id
 JOIN commesse c ON s.commessa_id = c.id
+LEFT JOIN users u ON s.creata_da = u.id
 ORDER BY s.data_modifica DESC;
     `);
     res.json(results);
@@ -67,14 +71,14 @@ ORDER BY s.data_modifica DESC;
 // 🔹 POST nuova scheda
 router.post("/", async (req, res) => {
   try {
-    const { commessa_id, tipo_id, titolo } = req.body;
+    const { commessa_id, tipo_id, titolo, creata_da } = req.body;
 
     if (!commessa_id || !tipo_id) {
       return res.status(400).send("Dati mancanti");
     }
 
     const sql = `
-      INSERT INTO SchedeTecniche (commessa_id, tipo_id, titolo, intestazione, contenuto, note)
+      INSERT INTO SchedeTecniche (commessa_id, tipo_id,creata_da, titolo, intestazione, contenuto, note)
       VALUES (?, ?, ?, JSON_OBJECT(), JSON_OBJECT(), "")
     `;
 

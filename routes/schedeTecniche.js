@@ -295,16 +295,18 @@ router.get("/tag/:tag", async (req, res) => {
   }
 });
 
-// GET /api/schedeTecniche/tag
+
+// GET /api/schedeTecniche/tag - restituisce tutti i tag distinti usati nelle note
 router.get("/tag", async (req, res) => {
   try {
-    const [tags] = await db.query(`
-      SELECT DISTINCT tag FROM SchedeTag ORDER BY tag ASC
-    `);
-    res.json(tags.map(row => row.tag));
-  } catch (error) {
-    console.error("Errore nel recupero dei tag:", error);
-    res.status(500).json({ error: "Errore interno del server" });
+    const [rows] = await db.query(
+      "SELECT DISTINCT tag FROM SchedeTag ORDER BY tag ASC"
+    );
+    const tagList = rows.map(r => r.tag);
+    res.json(tagList);
+  } catch (err) {
+    console.error("Errore nel recupero dei tag:", err);
+    res.status(500).json({ error: "Errore nel recupero dei tag" });
   }
 });
 

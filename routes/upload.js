@@ -52,5 +52,23 @@ router.post("/upload-image", upload.single("image"), async (req, res) => {
   }
 });
 
+// GET /api/upload/immagini/:scheda_id
+router.get("/immagini/:scheda_id", async (req, res) => {
+  const { scheda_id } = req.params;
+
+  try {
+    const [rows] = await db.execute(
+      "SELECT id, url, nome_file, utente_upload, timestamp_upload FROM SchedeImmagini WHERE scheda_id = ?",
+      [scheda_id]
+    );
+
+    res.json({ success: true, immagini: rows });
+  } catch (err) {
+    console.error("Errore nel recupero immagini:", err);
+    res.status(500).json({ success: false, error: "Errore nel recupero immagini" });
+  }
+});
+
+
 
 module.exports = router;

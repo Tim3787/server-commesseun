@@ -4,6 +4,10 @@ const db = require("../config/db");
 const path = require("path");
 const fs = require("fs");
 
+function estraiHashtag(testo) {
+  const matches = testo.match(/#\w+/g);
+  return matches ? matches.map(tag => tag.substring(1)) : [];
+}
 
 // 🔹 GET tutte le schede per una commessa
 router.get("/:commessaId/schede", async (req, res) => {
@@ -120,6 +124,18 @@ router.put("/:id", async (req, res) => {
       id
     ]);
 
+    
+    // 🏷️ 1. Estrai hashtag dalla nota
+    const tags = estraiHashtag(note);
+
+    // 🏷️ 2. Cancella i vecchi tag della scheda
+    await conn.query("DELETE FROM SchedeTag WHERE scheda_id = ?", [id]);
+
+    // 🏷️ 3. Inserisci i nuovi tag
+    for (const tag of tags) {
+      await conn.query("INSERT INTO SchedeTag (scheda_id, tag) VALUES (?, ?)", [id, tag]);
+    }
+    
     // 📝 Inserisci log modifica, se specificato
     if (risorsa_id && descrizione) {
       await conn.query(`
@@ -259,5 +275,38 @@ router.delete("/immagini/:id", async (req, res) => {
     res.status(500).json({ error: "Errore interno del server" });
   }
 });
+
+
+// GET /api/schedeTecniche/tag/:tag
+router.get("/tag/:tag", async (req, res) => {
+  const { tag } = req.params;
+  try {
+    const [righe] = await db.query(`
+      SELECT st.*
+      FROM SchedeTecniche st
+      JOIN SchedeTag t ON st.id = t.scheda_id
+      WHERE t.tag = ?
+    `, [tag]);
+
+    res.json(righe);
+  } catch (error) {
+    console.error("Errore ricerca per tag:", error);
+    res.status(500).json({ error: "Errore interno del server" });
+  }
+});
+
+// GET /api/schedeTecniche/tag
+router.get("/tag", async (req, res) => {
+  try {
+    const [tags] = await db.query(`
+      SELECT DISTINCT tag FROM SchedeTag ORDER BY tag ASC
+    `);
+    res.json(tags.map(row => row.tag));
+  } catch (error) {
+    console.error("Errore nel recupero dei tag:", error);
+    res.status(500).json({ error: "Errore interno del server" });
+  }
+});
+
 
 module.exports = router;

@@ -226,7 +226,7 @@ router.delete("/immagini/:id", async (req, res) => {
     }
 
     // 3. Elimina il record dal database
-    await pool.query("DELETE FROM SchedeImmagini WHERE id = ?", [id]);
+    await db.query("DELETE FROM SchedeImmagini WHERE id = ?", [id]);
 
     res.json({ success: true });
   } catch (error) {

@@ -40,6 +40,7 @@ router.get("/", async (req, res) => {
         s.data_modifica, s.data_creazione, s.creata_da,
         t.nome AS tipo,
         u.username AS creato_da_nome
+        c.numero_commessa
       FROM SchedeTecniche s
       JOIN TipiSchedaTecnica t ON s.tipo_id = t.id
       LEFT JOIN users u ON s.creata_da = u.id

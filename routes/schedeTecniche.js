@@ -213,7 +213,7 @@ router.delete("/immagini/:id", async (req, res) => {
 
   try {
     // 1. Recupera il percorso del file dal database
-    const [rows] = await pool.query("SELECT url FROM SchedeImmagini WHERE id = ?", [id]);
+    const [rows] = await db.query("SELECT url FROM SchedeImmagini WHERE id = ?", [id]);
     if (rows.length === 0) {
       return res.status(404).json({ error: "Immagine non trovata" });
     }

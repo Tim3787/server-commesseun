@@ -24,6 +24,15 @@ router.get("/tag", async (req, res) => {
   }
 });
 
+router.post('/tipiSchedaTecnica', async (req, res) => {
+  const { nome } = req.body;
+  const [result] = await db.query(
+    `INSERT INTO TipiSchedaTecnica (nome) VALUES (?)`,
+    [nome]
+  );
+  res.json({ id: result.insertId, nome });
+});
+
 // POST /api/schedeTecniche/tags - aggiunge un nuovo tag per una scheda
 router.post("/tags", async (req, res) => {
   const { scheda_id, tags } = req.body;
@@ -277,14 +286,8 @@ router.get('/tipiSchedaTecnica', async (req, res) => {
   res.json(tipi);
 });
 
-router.post('/tipiSchedaTecnica', async (req, res) => {
-  const { nome } = req.body;
-  const [result] = await db.query(
-    `INSERT INTO TipiSchedaTecnica (nome) VALUES (?)`,
-    [nome]
-  );
-  res.json({ id: result.insertId, nome });
-});
+
+
 
 router.delete('/tipiSchedaTecnica/:id', async (req, res) => {
   const { id } = req.params;

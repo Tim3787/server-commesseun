@@ -24,6 +24,13 @@ router.get("/tag", async (req, res) => {
   }
 });
 
+router.get('/tipiSchedaTecnica', async (req, res) => {
+  const [tipi] = await db.query(`SELECT id, nome FROM TipiSchedaTecnica`);
+  res.json(tipi);
+});
+
+
+
 router.post('/tipiSchedaTecnica', async (req, res) => {
   const { nome } = req.body;
   const [result] = await db.query(
@@ -279,11 +286,6 @@ router.get("/:id", async (req, res) => {
     console.error(err);
     res.status(500).send("Errore nel recupero della scheda.");
   }
-});
-
-router.get('/tipiSchedaTecnica', async (req, res) => {
-  const [tipi] = await db.query(`SELECT id, nome FROM TipiSchedaTecnica`);
-  res.json(tipi);
 });
 
 

@@ -472,5 +472,23 @@ router.put("/:id/stato", async (req, res) => {
 });
 
 
+router.get("/by-tag", async (req, res) => {
+  const { tag } = req.query;
+  try {
+    const result = await db.query(`
+      SELECT DISTINCT c.*
+      FROM SchedeTecniche st
+      JOIN SchedeTag sg ON st.id = sg.scheda_id
+      JOIN commesse c ON st.id = c.id
+      WHERE sg.tag = $1
+    `, [tag]);
+
+    res.json(result.rows);
+  } catch (error) {
+    console.error("Errore nella ricerca per tag:", error);
+    res.status(500).json({ error: "Errore server" });
+  }
+});
+
 
 module.exports = router;

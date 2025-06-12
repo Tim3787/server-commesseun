@@ -18,6 +18,7 @@ const statoCommessaRoutes  = require("./routes/stato-commessa.js");
 const PrenotazioneSaleRoutes  = require("./routes/sale-riunioni.js");
 const CommessaDettagliRoutes  = require("./routes/commessa-dettagli.js");
 const schedeTecnicheRoutes = require('./routes/schedeTecniche');
+const schedeMultiRoutes = require('./routes/schedeMulti');
 const uploadRoute = require("./routes/upload");
 
 const app = express();
@@ -63,6 +64,7 @@ app.use("/api/stato-commessa", statoCommessaRoutes);
 app.use("/api/sale-riunioni", PrenotazioneSaleRoutes);
 app.use("/api/commessa-dettagli", CommessaDettagliRoutes);
 app.use('/api/schedeTecniche', schedeTecnicheRoutes);
+app.use('/api/schedeMulti', schedeMultiRoutes);
 
 app.use("/uploads", express.static("uploads")); // Per servire i file statici
 app.use("/api/upload", uploadRoute); // Per gestire /api/upload-image

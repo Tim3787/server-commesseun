@@ -91,4 +91,15 @@ router.delete("/note/:id", async (req, res) => {
   }
 });
 
+
+// GET tipi di scheda multi
+router.get("/tipi", async (req, res) => {
+  try {
+    const [rows] = await db.query("SELECT * FROM TipiSchedeMulti ORDER BY nome");
+    res.json(rows);
+  } catch (err) {
+    res.status(500).json({ error: "Errore durante il recupero dei tipi di schede multi" });
+  }
+});
+
 module.exports = router;

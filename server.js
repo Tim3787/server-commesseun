@@ -64,7 +64,7 @@ app.use("/api/stato-commessa", statoCommessaRoutes);
 app.use("/api/sale-riunioni", PrenotazioneSaleRoutes);
 app.use("/api/commessa-dettagli", CommessaDettagliRoutes);
 app.use('/api/schedeTecniche', schedeTecnicheRoutes);
-app.use('/api/schedeMulti', schedeMultiRoutes);
+app.use('/api/schede-multi', schedeMultiRoutes);
 
 app.use("/uploads", express.static("uploads")); // Per servire i file statici
 app.use("/api/upload", uploadRoute); // Per gestire /api/upload-image

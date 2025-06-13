@@ -82,16 +82,15 @@ router.get("/:id/note", async (req, res) => {
   }
 });
 
-// POST nuova nota per una scheda
 router.post("/:id/note", async (req, res) => {
   try {
-    const { data, tipo_interno, autore_id, contenuto, allegato_path, creata_da, modifiche } = req.body;
+    const { contenuto, autore_id } = req.body;
 
     await db.query(
       `INSERT INTO SchedeMultiNote (
         scheda_multi_id, data, tipo_interno, autore, contenuto, allegato_path, creata_da, data_creazione, modifiche
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, NOW(), ?)`,
-      [req.params.id, data, tipo_interno, autore, contenuto, allegato_path || null, creata_da, modifiche || '']
+      ) VALUES (?, NOW(), ?, ?, ?, ?, ?, NOW(), ?)`,
+      [req.params.id, 'nota', autore_id, contenuto, null, autore_id, '']
     );
 
     res.json({ success: true });
@@ -100,7 +99,6 @@ router.post("/:id/note", async (req, res) => {
     res.status(500).json({ error: "Errore durante l'aggiunta della nota" });
   }
 });
-
 
 // PUT modifica nota
 router.put("/note/:id", async (req, res) => {

@@ -4,13 +4,25 @@ const express = require("express");
 const router = express.Router();
 const db = require('../config/db');
 
-// GET tipi di scheda multi
+// GET tipi di scheda multi (distinti per tipo)
 router.get("/tipi", async (req, res) => {
   try {
-    const [rows] = await db.query("SELECT * FROM TipiSchedeMulti ORDER BY nome");
-    res.json(rows);
+    const [rows] = await db.query(`
+      SELECT DISTINCT tipo AS nome 
+      FROM SchedeMulti 
+      WHERE tipo IS NOT NULL AND tipo <> '' 
+      ORDER BY tipo
+    `);
+
+    // Assegniamo un id fittizio per ciascun tipo
+    const tipi = rows.map((row, index) => ({
+      id: 1000 + index,
+      nome: row.nome
+    }));
+
+    res.json(tipi);
   } catch (err) {
-        console.error("Errore nel recupero di tutte le schede:", err.message);
+    console.error("Errore nel recupero dei tipi di schede multi:", err.message);
     res.status(500).json({ error: "Errore durante il recupero dei tipi di schede multi" });
   }
 });

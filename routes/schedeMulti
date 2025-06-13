@@ -52,7 +52,7 @@ router.get("/", async (req, res) => {
   }
 });
 
-// POST nuova scheda
+
 // POST nuova scheda
 router.post("/", async (req, res) => {
   try {
@@ -85,31 +85,42 @@ router.get("/:id/note", async (req, res) => {
 // POST nuova nota per una scheda
 router.post("/:id/note", async (req, res) => {
   try {
-    const { data, tipo_interno, autore, contenuto, allegato_path } = req.body;
+    const { data, tipo_interno, autore, contenuto, allegato_path, creata_da, modifiche } = req.body;
+
     await db.query(
-      `INSERT INTO SchedeMultiNote (scheda_multi_id, data, tipo_interno, autore, contenuto, allegato_path)
-       VALUES (?, ?, ?, ?, ?, ?)`,
-      [req.params.id, data, tipo_interno, autore, contenuto, allegato_path || null]
+      `INSERT INTO SchedeMultiNote (
+        scheda_multi_id, data, tipo_interno, autore, contenuto, allegato_path, creata_da, data_creazione, modifiche
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, NOW(), ?)`,
+      [req.params.id, data, tipo_interno, autore, contenuto, allegato_path || null, creata_da, modifiche || '']
     );
+
     res.json({ success: true });
   } catch (err) {
+    console.error(err);
     res.status(500).json({ error: "Errore durante l'aggiunta della nota" });
   }
 });
 
+
 // PUT modifica nota
 router.put("/note/:id", async (req, res) => {
   try {
-    const { data, tipo_interno, autore, contenuto, allegato_path } = req.body;
+    const { data, tipo_interno, autore, contenuto, allegato_path, modifiche } = req.body;
+
     await db.query(
-      `UPDATE SchedeMultiNote SET data=?, tipo_interno=?, autore=?, contenuto=?, allegato_path=? WHERE id=?`,
-      [data, tipo_interno, autore, contenuto, allegato_path, req.params.id]
+      `UPDATE SchedeMultiNote 
+       SET data=?, tipo_interno=?, autore=?, contenuto=?, allegato_path=?, modifiche=? 
+       WHERE id=?`,
+      [data, tipo_interno, autore, contenuto, allegato_path || null, modifiche || '', req.params.id]
     );
+
     res.json({ success: true });
   } catch (err) {
+    console.error(err);
     res.status(500).json({ error: "Errore durante la modifica della nota" });
   }
 });
+
 
 // DELETE nota
 router.delete("/note/:id", async (req, res) => {

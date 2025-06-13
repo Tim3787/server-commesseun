@@ -85,7 +85,7 @@ router.get("/:id/note", async (req, res) => {
 // POST nuova nota per una scheda
 router.post("/:id/note", async (req, res) => {
   try {
-    const { data, tipo_interno, autore, contenuto, allegato_path, creata_da, modifiche } = req.body;
+    const { data, tipo_interno, autore_id, contenuto, allegato_path, creata_da, modifiche } = req.body;
 
     await db.query(
       `INSERT INTO SchedeMultiNote (

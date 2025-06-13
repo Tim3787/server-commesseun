@@ -60,7 +60,8 @@ router.post("/", async (req, res) => {
       `INSERT INTO SchedeMulti (commessa_id, tipo, titolo, descrizione, data_creazione) VALUES (?, ?, ?, ?, CURDATE())`,
       [commessa_id, tipo, titolo, descrizione]
     );
-    res.json({ success: true });
+    const [scheda] = await db.query('SELECT * FROM schede_multi WHERE id = ?', [result.insertId]);
+    res.json({ scheda});
   } catch (err) {
     res.status(500).json({ error: "Errore durante la creazione della scheda" });
   }

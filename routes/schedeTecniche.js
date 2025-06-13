@@ -25,7 +25,7 @@ router.get("/tag", async (req, res) => {
 });
 
 router.get('/tipiSchedaTecnica', async (req, res) => {
-  const [tipi] = await db.query(`SELECT id, nome FROM TipiSchedaTecnica`);
+  const [tipi] = await db.query(`SELECT id, nome, categoria FROM TipiSchedaTecnica`);
   res.json(tipi);
 });
 

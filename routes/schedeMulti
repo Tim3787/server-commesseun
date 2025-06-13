@@ -53,16 +53,21 @@ router.get("/", async (req, res) => {
 });
 
 // POST nuova scheda
+// POST nuova scheda
 router.post("/", async (req, res) => {
   try {
     const { commessa_id, tipo, titolo, descrizione } = req.body;
-    await db.query(
+
+    const [result] = await db.query(
       `INSERT INTO SchedeMulti (commessa_id, tipo, titolo, descrizione, data_creazione) VALUES (?, ?, ?, ?, CURDATE())`,
       [commessa_id, tipo, titolo, descrizione]
     );
-    const [scheda] = await db.query('SELECT * FROM schede_multi WHERE id = ?', [result.insertId]);
-    res.json({ scheda});
+
+    const [rows] = await db.query('SELECT * FROM SchedeMulti WHERE id = ?', [result.insertId]);
+
+    res.json(rows[0]); // ✅ invia direttamente l'oggetto scheda creato
   } catch (err) {
+    console.error(err); // utile per debug
     res.status(500).json({ error: "Errore durante la creazione della scheda" });
   }
 });

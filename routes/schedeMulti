@@ -10,6 +10,7 @@ router.get("/tipi", async (req, res) => {
     const [rows] = await db.query("SELECT * FROM TipiSchedeMulti ORDER BY nome");
     res.json(rows);
   } catch (err) {
+        console.error("Errore nel recupero di tutte le schede:", err.message);
     res.status(500).json({ error: "Errore durante il recupero dei tipi di schede multi" });
   }
 });

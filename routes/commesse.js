@@ -481,6 +481,15 @@ router.put("/:id/stato", async (req, res) => {
     if (result.affectedRows === 0) {
       return res.status(404).json({ error: "Commessa non trovata o stato non aggiornato." });
     }
+        const userIds = [44, 26];
+   const messaggio = `È stata creata una nuova commessa: ${numero_commessa} | In consegna il: ${new Date(data_consegna).toLocaleDateString("it-IT")}`;
+    await inviaNotificheUtenti({
+     userIds,
+      titolo: "Nuova commessa",
+      messaggio,
+    });
+
+    
 
     res.status(200).json({ message: "Stato della commessa aggiornato con successo." });
   } catch (err) {

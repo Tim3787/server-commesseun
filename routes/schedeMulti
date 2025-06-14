@@ -22,10 +22,11 @@ router.post("/:id/note", async (req, res) => {
   try {
     const { contenuto, autore_id } = req.body;
     await db.query(
-      `INSERT INTO SchedeTecnicheNote (scheda_tecnica_id, data, autore_id, contenuto, allegato_path, data_creazione)
-       VALUES (?, NOW(), ?, ?, NULL, '')`,
-      [req.params.id, autore_id, contenuto]
-    );
+        `INSERT INTO SchedeTecnicheNote (
+     scheda_tecnica_id, data, autore_id, contenuto, allegato_path
+   ) VALUES (?, NOW(), ?, ?, NULL)`,
+  [req.params.id, autore_id, contenuto]
+);
     res.json({ success: true });
   } catch (err) {
     console.error(err);
@@ -39,8 +40,13 @@ router.put("/note/:id", async (req, res) => {
 
     await db.query(
       `UPDATE SchedeTecnicheNote 
-       SET data=?, autore_id=?, contenuto=?, allegato_path=?, modifiche=? 
-       WHERE id=?`,
+       SET data = ?, 
+           autore_id = ?, 
+           contenuto = ?, 
+           allegato_path = ?, 
+           modifiche = ?, 
+           data_ultima_modifica = NOW()
+       WHERE id = ?`,
       [data, autore_id, contenuto, allegato_path || null, modifiche || '', req.params.id]
     );
 
@@ -50,6 +56,7 @@ router.put("/note/:id", async (req, res) => {
     res.status(500).json({ error: "Errore durante la modifica della nota" });
   }
 });
+
 
 router.delete("/note/:id", async (req, res) => {
   try {

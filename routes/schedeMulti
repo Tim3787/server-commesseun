@@ -28,30 +28,35 @@ const [rows] = await db.query(
 });
 
 router.post("/:id/note", async (req, res) => {
-  const { autore_id, contenuto, allegato_path } = req.body;
-  try {
-    const [result] = await db.query(`
-      INSERT INTO SchedeTecnicheNote (scheda_tecnica_id, autore_id, contenuto, allegato_path)
-      VALUES (?, ?, ?, ?)
-    `, [
-      req.params.id,
-      autore_id,
-      contenuto,
-      allegato_path || null
-    ]);
+ const { autore_id, contenuto, allegato_path } = req.body;
+const dataOggi = new Date(); // oppure new Date().toISOString().slice(0, 10)
 
-    const [newNote] = await db.query(`
-      SELECT n.*, r.nome AS autore_nome
-      FROM SchedeTecnicheNote n
-      LEFT JOIN risorse r ON n.autore_id = r.id
-      WHERE n.id = ?
-    `, [result.insertId]);
+try {
+  const [result] = await db.query(`
+    INSERT INTO SchedeTecnicheNote 
+    (scheda_tecnica_id, autore_id, contenuto, allegato_path, data)
+    VALUES (?, ?, ?, ?, ?)
+  `, [
+    req.params.id,
+    autore_id,
+    contenuto,
+    allegato_path || null,
+    dataOggi
+  ]);
 
-    res.status(201).json(newNote[0]);
-  } catch (err) {
-    console.error("Errore durante la creazione della nota:", err.message);
-    res.status(500).send("Errore durante la creazione della nota.");
-  }
+  const [newNote] = await db.query(`
+    SELECT n.*, r.nome AS autore_nome
+    FROM SchedeTecnicheNote n
+    LEFT JOIN risorse r ON n.autore_id = r.id
+    WHERE n.id = ?
+  `, [result.insertId]);
+
+  res.status(201).json(newNote[0]);
+} catch (err) {
+  console.error("Errore durante la creazione della nota:", err.message);
+  res.status(500).send("Errore durante la creazione della nota.");
+}
+
 });
 
 

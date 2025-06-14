@@ -458,30 +458,37 @@ router.put("/:commessaId/stati-avanzamento/:statoId", async (req, res) => {
 
 // Modificare uno stato esistente della commessa
 router.put("/:id/stato", async (req, res) => {
-  const { id } = req.params; // ID della commessa
-  const { stato_commessa } = req.body; // Nuovo stato da impostare
+  const { id } = req.params;
+  const { stato_commessa } = req.body;
 
-  // Verifica che stato_commessa sia stato fornito
   if (!stato_commessa) {
     return res.status(400).json({ error: "Lo stato della commessa è richiesto." });
   }
 
-  const sql = "UPDATE commesse SET stato_commessa = ? WHERE id = ?"; // Query per aggiornare lo stato della commessa
+  const sql = "UPDATE commesse SET stato_commessa = ? WHERE id = ?";
   try {
     const [result] = await db.query(sql, [stato_commessa, id]);
 
     if (result.affectedRows === 0) {
       return res.status(404).json({ error: "Commessa non trovata o stato non aggiornato." });
     }
-const userIds = [44, 26];
-const messaggio = `È stato aggiornato lo stato della commessa: ${numero_commessa} | In consegna il: ${new Date(data_consegna).toLocaleDateString("it-IT")} | Nuovo stato: ${stato}`;
 
-await inviaNotificheUtenti({
-  userIds,
-  titolo: "Cambiamento stato commessa",
-  messaggio,
-});
+    const [commessaInfo] = await db.query("SELECT numero_commessa, data_consegna FROM commesse WHERE id = ?", [id]);
 
+    if (!commessaInfo.length) {
+      return res.status(404).json({ error: "Commessa non trovata dopo l'aggiornamento." });
+    }
+
+    const { numero_commessa, data_consegna } = commessaInfo[0];
+    const userIds = [44, 26];
+
+    const messaggio = `È stato aggiornato lo stato della commessa: ${numero_commessa} | In consegna il: ${new Date(data_consegna).toLocaleDateString("it-IT")} | Nuovo stato: ${stato_commessa}`;
+
+    await inviaNotificheUtenti({
+      userIds,
+      titolo: "Cambiamento stato commessa",
+      messaggio,
+    });
 
     res.status(200).json({ message: "Stato della commessa aggiornato con successo." });
   } catch (err) {

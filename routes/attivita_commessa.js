@@ -2,7 +2,7 @@ const express = require("express");
 const router = express.Router();
 const db = require("../config/db");
 const jwt = require("jsonwebtoken");
-const { inviaNotificheUtenti } = require("../utils/notificationManager");
+const { inviaNotificheUtenti } = require("../Utils/notificationManager");
 
 
 (req, res, next) => {

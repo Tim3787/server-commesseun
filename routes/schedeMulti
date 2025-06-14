@@ -92,13 +92,21 @@ await conn.query(`
 
 
 router.delete("/note/:id", async (req, res) => {
+  const notaId = req.params.id;
+
   try {
-    await db.query(`DELETE FROM SchedeTecnicheNote WHERE id = ?`, [req.params.id]);
-    res.status(200).send("Nota eliminata con successo.");
+    // Elimina eventuali modifiche associate alla nota
+    await db.query(`DELETE FROM SchedeTecnicheNoteModifiche WHERE nota_id = ?`, [notaId]);
+
+    // Elimina la nota stessa
+    await db.query(`DELETE FROM SchedeTecnicheNote WHERE id = ?`, [notaId]);
+
+    res.status(200).send("Nota e modifiche eliminate con successo.");
   } catch (err) {
-    console.error("Errore eliminazione nota:", err.message);
-    res.status(500).send("Errore eliminazione nota.");
+    console.error("Errore eliminazione nota o modifiche:", err.message);
+    res.status(500).send("Errore durante l'eliminazione della nota.");
   }
 });
+
 
 module.exports = router;

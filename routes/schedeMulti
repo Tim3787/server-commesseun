@@ -5,77 +5,13 @@ const router = express.Router();
 const db = require('../config/db');
 
 // GET tipi di scheda multi (distinti per tipo)
-router.get("/tipi", async (req, res) => {
-  try {
-    const [rows] = await db.query(`
-      SELECT DISTINCT tipo AS nome 
-      FROM SchedeMulti 
-      WHERE tipo IS NOT NULL AND tipo <> '' 
-      ORDER BY tipo
-    `);
 
-    // Assegniamo un id fittizio per ciascun tipo
-    const tipi = rows.map((row, index) => ({
-      id: 1000 + index,
-      nome: row.nome
-    }));
-
-    res.json(tipi);
-  } catch (err) {
-    console.error("Errore nel recupero dei tipi di schede multi:", err.message);
-    res.status(500).json({ error: "Errore durante il recupero dei tipi di schede multi" });
-  }
-});
-
-
-// GET tutte le schede (con filtri opzionali)
-router.get("/", async (req, res) => {
-  try {
-    const { commessa_id, tipo } = req.query;
-    const conditions = [];
-    const params = [];
-
-    if (commessa_id) {
-      conditions.push("commessa_id = ?");
-      params.push(commessa_id);
-    }
-    if (tipo) {
-      conditions.push("tipo = ?");
-      params.push(tipo);
-    }
-
-    const where = conditions.length ? `WHERE ${conditions.join(" AND ")}` : "";
-    const [rows] = await db.query(`SELECT * FROM SchedeMulti ${where}`, params);
-    res.json(rows);
-  } catch (err) {
-    res.status(500).json({ error: "Errore durante il recupero delle schede" });
-  }
-});
-
-
-// POST nuova scheda
-router.post("/", async (req, res) => {
-  try {
-    const { commessa_id, tipo, titolo, descrizione } = req.body;
-
-    const [result] = await db.query(
-      `INSERT INTO SchedeMulti (commessa_id, tipo, titolo, descrizione, data_creazione) VALUES (?, ?, ?, ?, CURDATE())`,
-      [commessa_id, tipo, titolo, descrizione]
-    );
-
-    const [rows] = await db.query('SELECT * FROM SchedeMulti WHERE id = ?', [result.insertId]);
-
-    res.json(rows[0]); // ✅ invia direttamente l'oggetto scheda creato
-  } catch (err) {
-    console.error(err); // utile per debug
-    res.status(500).json({ error: "Errore durante la creazione della scheda" });
-  }
-});
-
-// GET note associate a una scheda
 router.get("/:id/note", async (req, res) => {
   try {
-    const [rows] = await db.query("SELECT * FROM SchedeMultiNote WHERE scheda_multi_id = ? ORDER BY data DESC", [req.params.id]);
+    const [rows] = await db.query(
+      `SELECT * FROM SchedeTecnicheNote WHERE scheda_tecnica_id = ? ORDER BY data DESC`,
+      [req.params.id]
+    );
     res.json(rows);
   } catch (err) {
     res.status(500).json({ error: "Errore durante il recupero delle note" });
@@ -85,14 +21,11 @@ router.get("/:id/note", async (req, res) => {
 router.post("/:id/note", async (req, res) => {
   try {
     const { contenuto, autore_id } = req.body;
-
     await db.query(
-      `INSERT INTO SchedeMultiNote (
-        scheda_multi_id, data, tipo_interno, autore, contenuto, allegato_path, creata_da, data_creazione, modifiche
-      ) VALUES (?, NOW(), ?, ?, ?, ?, ?, NOW(), ?)`,
-      [req.params.id, 'nota', autore_id, contenuto, null, autore_id, '']
+      `INSERT INTO SchedeTecnicheNote (scheda_tecnica_id, data, autore_id, contenuto, allegato_path, modifiche)
+       VALUES (?, NOW(), ?, ?, NULL, '')`,
+      [req.params.id, autore_id, contenuto]
     );
-
     res.json({ success: true });
   } catch (err) {
     console.error(err);
@@ -100,16 +33,15 @@ router.post("/:id/note", async (req, res) => {
   }
 });
 
-// PUT modifica nota
 router.put("/note/:id", async (req, res) => {
   try {
-    const { data, tipo_interno, autore, contenuto, allegato_path, modifiche } = req.body;
+    const { data, autore_id, contenuto, allegato_path, modifiche } = req.body;
 
     await db.query(
-      `UPDATE SchedeMultiNote 
-       SET data=?, tipo_interno=?, autore=?, contenuto=?, allegato_path=?, modifiche=? 
+      `UPDATE SchedeTecnicheNote 
+       SET data=?, autore_id=?, contenuto=?, allegato_path=?, modifiche=? 
        WHERE id=?`,
-      [data, tipo_interno, autore, contenuto, allegato_path || null, modifiche || '', req.params.id]
+      [data, autore_id, contenuto, allegato_path || null, modifiche || '', req.params.id]
     );
 
     res.json({ success: true });
@@ -119,11 +51,9 @@ router.put("/note/:id", async (req, res) => {
   }
 });
 
-
-// DELETE nota
 router.delete("/note/:id", async (req, res) => {
   try {
-    await db.query("DELETE FROM SchedeMultiNote WHERE id = ?", [req.params.id]);
+    await db.query("DELETE FROM SchedeTecnicheNote WHERE id = ?", [req.params.id]);
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ error: "Errore durante l'eliminazione della nota" });

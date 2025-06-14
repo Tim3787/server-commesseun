@@ -260,14 +260,6 @@ router.put("/:commessaId/reparti/:repartoId/stato", async (req, res) => {
       commessaId,
     ]);
 
-const userIds = [44, 26];
-const messaggio = `È stato aggiornato lo stato della commessa: ${numero_commessa} | In consegna il: ${new Date(data_consegna).toLocaleDateString("it-IT")} | Nuovo stato: ${stato}`;
-
-await inviaNotificheUtenti({
-  userIds,
-  titolo: "Cambiamento stato commessa",
-  messaggio,
-});
 
     res.status(200).send("Stato avanzamento aggiornato con successo.");
   } catch (error) {
@@ -481,15 +473,15 @@ router.put("/:id/stato", async (req, res) => {
     if (result.affectedRows === 0) {
       return res.status(404).json({ error: "Commessa non trovata o stato non aggiornato." });
     }
-        const userIds = [44, 26];
-   const messaggio = `È stata creata una nuova commessa: ${numero_commessa} | In consegna il: ${new Date(data_consegna).toLocaleDateString("it-IT")}`;
-    await inviaNotificheUtenti({
-     userIds,
-      titolo: "Nuova commessa",
-      messaggio,
-    });
+const userIds = [44, 26];
+const messaggio = `È stato aggiornato lo stato della commessa: ${numero_commessa} | In consegna il: ${new Date(data_consegna).toLocaleDateString("it-IT")} | Nuovo stato: ${stato}`;
 
-    
+await inviaNotificheUtenti({
+  userIds,
+  titolo: "Cambiamento stato commessa",
+  messaggio,
+});
+
 
     res.status(200).json({ message: "Stato della commessa aggiornato con successo." });
   } catch (err) {

@@ -51,18 +51,39 @@ router.post("/:id/note", async (req, res) => {
 
 
 router.put("/note/:id", async (req, res) => {
-  const { contenuto, allegato_path } = req.body;
+  const { contenuto, allegato_path, utente_id, scheda_id } = req.body;
+
+  const conn = await db.getConnection(); // Se usi pool, o `await db.beginTransaction()` se supportato
   try {
-    await db.query(`
+    await conn.beginTransaction();
+
+    // 1. Aggiorna la nota
+    await conn.query(
+      `
       UPDATE SchedeTecnicheNote
       SET contenuto = ?, allegato_path = ?, data_ultima_modifica = CURRENT_TIMESTAMP
       WHERE id = ?
-    `, [contenuto, allegato_path || null, req.params.id]);
+      `,
+      [contenuto, allegato_path || null, req.params.id]
+    );
 
-    res.status(200).send("Nota aggiornata con successo.");
+    // 2. Inserisci la modifica
+    await conn.query(
+      `
+      INSERT INTO modifiche (scheda_id, risorsa_id, nota_id, data_modifica, descrizione)
+      VALUES (?, ?, ?, NOW(), ?)
+      `,
+      [scheda_id, utente_id, req.params.id, `Modifica nota ID: ${req.params.id}`]
+    );
+
+    await conn.commit();
+    res.status(200).send("Nota aggiornata e modifica registrata.");
   } catch (err) {
+    await conn.rollback();
     console.error("Errore aggiornamento nota:", err.message);
     res.status(500).send("Errore aggiornamento nota.");
+  } finally {
+    conn.release(); // O chiudi la connessione se non usi pool
   }
 });
 

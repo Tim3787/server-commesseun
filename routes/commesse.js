@@ -260,6 +260,14 @@ router.put("/:commessaId/reparti/:repartoId/stato", async (req, res) => {
       commessaId,
     ]);
 
+    const userIds = [44, 26];
+   const messaggio = `È stata aggiornato lo stato di una commessa: ${numero_commessa} | In consegna il: ${new Date(data_consegna).toLocaleDateString("it-IT")}  | nuovo stato:  ${stato}  `;
+    await inviaNotificheUtenti({
+     userIds,
+      titolo: "Nuova commessa",
+      messaggio,
+    });
+
     res.status(200).send("Stato avanzamento aggiornato con successo.");
   } catch (error) {
     console.error("Errore durante l'aggiornamento dello stato avanzamento:", error);
@@ -342,7 +350,7 @@ router.post("/", async (req, res) => {
     ]);
 
     const userIds = [44, 26];
-    const messaggio = `È stata creata una nuova commessa: ${numero_commessa}\nIn consegna il: ${data_consegna}   `;
+   const messaggio = `È stata creata una nuova commessa: ${numero_commessa} | In consegna il: ${new Date(data_consegna).toLocaleDateString("it-IT")}`;
     await inviaNotificheUtenti({
      userIds,
       titolo: "Nuova commessa",

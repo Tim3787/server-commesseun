@@ -22,7 +22,7 @@ router.post("/:id/note", async (req, res) => {
   try {
     const { contenuto, autore_id } = req.body;
     await db.query(
-      `INSERT INTO SchedeTecnicheNote (scheda_tecnica_id, data, autore_id, contenuto, allegato_path, modifiche)
+      `INSERT INTO SchedeTecnicheNote (scheda_tecnica_id, data, autore_id, contenuto, allegato_path, data_creazione)
        VALUES (?, NOW(), ?, ?, NULL, '')`,
       [req.params.id, autore_id, contenuto]
     );

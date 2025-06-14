@@ -27,15 +27,16 @@ const inviaNotificheUtenti = async ({ userIds, titolo, messaggio }) => {
     }
 
     // Crea i messaggi push per chi ha token
-    const pushMessages = users
-      .filter(u => u.device_token)
-      .map(u => ({
-        token: u.device_token,
-        notification: {
-          title: titolo,
-          body: messaggio,
-        },
-      }));
+const pushMessages = users
+  .filter(u => u.device_token)
+  .map(u => ({
+    token: u.device_token,
+    data: {
+      title: titolo,
+      body: messaggio,
+      tipo: "notifica", // opzionale per filtrare o differenziare
+    },
+  }));
 
     // Invia le notifiche push
     const results = await Promise.allSettled(

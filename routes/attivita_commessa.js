@@ -2,7 +2,7 @@ const express = require("express");
 const router = express.Router();
 const db = require("../config/db");
 const jwt = require("jsonwebtoken");
-
+const { inviaNotificheUtenti } = require("../utils/notificationManager");
 
 
 (req, res, next) => {
@@ -185,22 +185,20 @@ router.post("/", getUserIdFromToken, async (req, res) => {
       JSON.stringify(includedWeekends || [])
     ]);
 
-    // Crea una notifica per l'utente responsabile
+    // Crea il messaggio
     const message = `Ti è stata assegnata una nuova attività: 
       - Commessa: ${numeroCommessa}
       - Tipo attività: ${tipoAttivita}
       - Data inizio: ${new Date(data_inizio).toLocaleDateString()}.`;
 
-    await db.query("INSERT INTO notifications (user_id, message) VALUES (?, ?)", [userId, message]);
+    // Invia notifica (salva in DB + push)
+    await inviaNotificheUtenti({
+      userIds: [userId],
+      titolo: "Nuova Attività Assegnata",
+      messaggio: message,
+    });
 
-    // Invia la notifica push se esiste il device token
-    if (deviceToken) {
-      const sendNotification = require("./sendNotification");
-      await sendNotification(deviceToken, "Nuova Notifica", message);
-      console.log("Notifica push inviata con successo.");
-    } else {
-      console.warn("Device token non presente, notifica push non inviata.");
-    }
+    console.log("Notifica inviata (push e DB)");
 
     res.status(201).send("Attività assegnata con successo!");
   } catch (error) {

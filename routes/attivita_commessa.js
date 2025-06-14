@@ -197,9 +197,6 @@ router.post("/", getUserIdFromToken, async (req, res) => {
       titolo: "Nuova Attività Assegnata",
       messaggio: message,
     });
-
-    console.log("Notifica inviata (push e DB)");
-
     res.status(201).send("Attività assegnata con successo!");
   } catch (error) {
     console.error("Errore durante l'assegnazione dell'attività:", error);
@@ -258,16 +255,13 @@ router.put("/:id", getUserIdFromToken, async (req, res) => {
       - Commessa: ${numeroCommessa}
       - Tipo attività: ${tipoAttivita}
       - Data inizio: ${new Date(data_inizio).toLocaleDateString()}.`;
-    await db.query("INSERT INTO notifications (user_id, message) VALUES (?, ?)", [userId, message]);
+    
 
-    // Invia la notifica push se esiste il device token
-    if (deviceToken) {
-      const sendNotification = require("./sendNotification");
-      await sendNotification(deviceToken, "Nuova Notifica", message);
-      console.log("Notifica push inviata con successo.");
-    } else {
-      console.warn("Device token non presente, notifica push non inviata.");
-    }
+    await inviaNotificheUtenti({
+      userIds: [userId],
+      titolo: "L'attività è stata modificata:",
+      messaggio: message,
+    });
 
     res.send("Attività aggiornata con successo e notifica inviata!");
   } catch (err) {
@@ -317,18 +311,12 @@ router.delete("/:id", getUserIdFromToken, async (req, res) => {
     const message = `L'attività è stata eliminata:
       - Commessa: ${numeroCommessa}
       - Tipo attività: ${tipoAttivita}`;
-    if (userId) {
-      await db.query("INSERT INTO notifications (user_id, message) VALUES (?, ?)", [userId, message]);
-    }
 
-    // Invia la notifica push se esiste il device token
-    if (deviceToken) {
-      const sendNotification = require("./sendNotification");
-      await sendNotification(deviceToken, "Nuova Notifica", message);
-      console.log("Notifica push inviata con successo.");
-    } else {
-      console.warn("Device token non presente, notifica push non inviata.");
-    }
+    await inviaNotificheUtenti({
+      userIds: [userId],
+      titolo: "L'attività è stata eliminata:",
+      messaggio: message,
+    });
 
     res.send("Attività eliminata con successo!");
   } catch (err) {

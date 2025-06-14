@@ -3,7 +3,7 @@ const router = express.Router();
 const db = require("../config/db");
 const jwt = require("jsonwebtoken");
 const sendNotification = require("./sendNotification");
-
+const { inviaNotificheUtenti } = require("../Utils/notificationManager");
 
 
 (req, res, next) => {
@@ -212,37 +212,31 @@ router.put("/:id/stato", getUserIdFromToken, async (req, res) => {
       return res.status(404).send("Attività non trovata.");
     }
 
-    // Ora invia la notifica ai manager di reparto.
-    // Ad esempio, supponiamo che i manager abbiano role_id = 1.
-    // Recupera i device_token dei manager del reparto specificato.
+
+    // Associazione reparto → managerId
     const managerMapping = {
-      1: 26,  // Manager per il reparto 1
-      2: 44,  // Manager per il reparto 2
-    
-      // Aggiungi le altre associazioni come necessario...
+      1: 26,
+      2: 44,
+      // Aggiungi altri se necessario
     };
-// Usa la mappatura per ottenere l'id del manager per questo reparto
-const managerId = managerMapping[repartoId];
-if (!managerId) {
-  console.log("Nessun manager associato per il reparto:", repartoId);
-  // Puoi decidere di non inviare la notifica o gestirla in altro modo
-}
 
-// Ora recupera il device_token del manager usando il managerId
-const [manager] = await db.query("SELECT device_token FROM users WHERE id = ?", [managerId]);
+    const managerId = managerMapping[repartoId];
 
-if (manager.length > 0 && manager[0].device_token) {
-  const deviceToken = manager[0].device_token;
-  const message = `Lo stato dell'attività ${tipoAttivita} della commessa ${numeroCommessa} è stato aggiornato a ${
-    stato === 1 ? "Iniziata" : "Completata"
-  }.`;
+    if (!managerId) {
+      console.log("Nessun manager associato per il reparto:", repartoId);
+      return res.status(200).send("Stato aggiornato ma nessun manager notificato.");
+    }
 
-  const sendNotification = require("./sendNotification");
-  await sendNotification(deviceToken, "Aggiornamento attività", message);
-  console.log("Notifica push inviata con successo al manager con id:", managerId);
-} else {
-  console.log("Nessun dispositivo registrato per il manager con id:", managerId);
-}
+    // Costruisci il messaggio
+    const statoStr = stato === 1 ? "Iniziata" : stato === 2 ? "Completata" : `Aggiornata (${stato})`;
+    const message = `Lo stato dell'attività ${tipoAttivita} della commessa ${numeroCommessa} è stato aggiornato a: ${statoStr}.`;
+
+    // Usa il nuovo sistema centralizzato
+    await inviaNotificheUtenti({
+      userIds: [managerId],
+      titolo: "Aggiornamento attività",
+      messaggio: message,
+    });
 
     res.status(200).send("Stato dell'attività aggiornato con successo.");
   } catch (err) {

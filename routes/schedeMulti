@@ -70,7 +70,7 @@ router.put("/note/:id", async (req, res) => {
     // 2. Inserisci la modifica
     await conn.query(
       `
-      INSERT INTO modifiche (scheda_id, risorsa_id, nota_id, data_modifica, descrizione)
+      INSERT INTO SchedeModifiche (scheda_id, risorsa_id, nota_id, data_modifica, descrizione)
       VALUES (?, ?, ?, NOW(), ?)
       `,
       [scheda_id, utente_id, req.params.id, `Modifica nota ID: ${req.params.id}`]

@@ -1,6 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const db = require("../config/db");
+const { inviaNotificheUtenti } = require("../Utils/notificationManager");
 
 const formatMySQLDate = (isoDate) => {
   if (!isoDate || isNaN(new Date(isoDate))) return null; // Verifica se la data è valida
@@ -339,6 +340,14 @@ router.post("/", async (req, res) => {
       cliente,
       stato_commessa,
     ]);
+
+    const userIds = [44, 26];
+    const messaggio = `È stata creata una nuova commessa: ${numero_commessa}\nIn consegna il: ${data_consegna}   `;
+    await inviaNotificheUtenti({
+     userIds,
+      titolo: "Nuova commessa",
+      messaggio,
+    });
 
     res.status(201).json({
       message: "Commessa creata con successo e stati avanzamento iniziali associati.",

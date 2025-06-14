@@ -474,6 +474,10 @@ router.put("/:id/stato", async (req, res) => {
     }
 
     const [commessaInfo] = await db.query("SELECT numero_commessa, data_consegna FROM commesse WHERE id = ?", [id]);
+// Recupera nome dello stato_commessa
+const [statoInfo] = await db.query("SELECT nome_stato FROM stati_commessa WHERE id = ?", [stato_commessa]);
+
+const nomeStato = statoInfo.length > 0 ? statoInfo[0].nome_stato : `Stato ${stato_commessa}`;
 
     if (!commessaInfo.length) {
       return res.status(404).json({ error: "Commessa non trovata dopo l'aggiornamento." });
@@ -482,7 +486,7 @@ router.put("/:id/stato", async (req, res) => {
     const { numero_commessa, data_consegna } = commessaInfo[0];
     const userIds = [44, 26];
 
-    const messaggio = `È stato aggiornato lo stato della commessa: ${numero_commessa} | In consegna il: ${new Date(data_consegna).toLocaleDateString("it-IT")} | Nuovo stato: ${stato_commessa}`;
+    const messaggio = `È stato aggiornato lo stato della commessa: ${numero_commessa} | In consegna il: ${new Date(data_consegna).toLocaleDateString("it-IT")} | Nuovo stato: ${nomeStato}`;
 
     await inviaNotificheUtenti({
       userIds,

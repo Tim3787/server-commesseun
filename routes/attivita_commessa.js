@@ -189,7 +189,9 @@ router.post("/", getUserIdFromToken, async (req, res) => {
     const message = `Ti è stata assegnata una nuova attività: 
       - Commessa: ${numeroCommessa}
       - Tipo attività: ${tipoAttivita}
-      - Data inizio: ${new Date(data_inizio).toLocaleDateString()}.`;
+      - Data inizio: ${new Date(data_inizio).toLocaleDateString()}
+      - Durata: ${durata} giorni
+      .`;
 
     // Invia notifica (salva in DB + push)
     await inviaNotificheUtenti({

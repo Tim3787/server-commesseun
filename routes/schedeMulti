@@ -8,14 +8,19 @@ const db = require('../config/db');
 
 router.get("/:id/note", async (req, res) => {
   try {
-    const [rows] = await db.query(
-      `SELECT n.*, r.nome AS creato_da_nome
-       FROM SchedeTecnicheNote n
-       LEFT JOIN risorse r ON n.autore_id = r.id
-       WHERE n.scheda_tecnica_id = ?
-       ORDER BY n.data DESC`,
-      [req.params.id]
-    );
+const [rows] = await db.query(
+  `SELECT 
+     n.*, 
+     r1.nome AS creato_da_nome,
+     r2.nome AS modificato_da_nome
+   FROM SchedeTecnicheNote n
+   LEFT JOIN risorse r1 ON n.autore_id = r1.id
+   LEFT JOIN risorse r2 ON n.modificato_da_id = r2.id
+   WHERE n.scheda_tecnica_id = ?
+   ORDER BY n.data DESC`,
+  [req.params.id]
+);
+
     res.json(rows);
   } catch (err) {
     res.status(500).json({ error: "Errore durante il recupero delle note" });
@@ -58,14 +63,11 @@ router.put("/note/:id", async (req, res) => {
     await conn.beginTransaction();
 
     // 1. Aggiorna la nota
-    await conn.query(
-      `
-      UPDATE SchedeTecnicheNote
-      SET contenuto = ?, allegato_path = ?, data_ultima_modifica = CURRENT_TIMESTAMP
-      WHERE id = ?
-      `,
-      [contenuto, allegato_path || null, req.params.id]
-    );
+await conn.query(`
+  UPDATE SchedeTecnicheNote
+  SET contenuto = ?, allegato_path = ?, data_ultima_modifica = CURRENT_TIMESTAMP, modificato_da_id = ?
+  WHERE id = ?
+`, [contenuto, allegato_path || null, utente_id, req.params.id]);
 
     // 2. Inserisci la modifica
     await conn.query(

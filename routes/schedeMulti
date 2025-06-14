@@ -9,7 +9,11 @@ const db = require('../config/db');
 router.get("/:id/note", async (req, res) => {
   try {
     const [rows] = await db.query(
-      `SELECT * FROM SchedeTecnicheNote WHERE scheda_tecnica_id = ? ORDER BY data DESC`,
+      `SELECT n.*, r.nome AS creato_da_nome
+       FROM SchedeTecnicheNote n
+       LEFT JOIN risorse r ON n.autore_id = r.id
+       WHERE n.scheda_tecnica_id = ?
+       ORDER BY n.data DESC`,
       [req.params.id]
     );
     res.json(rows);
@@ -19,54 +23,59 @@ router.get("/:id/note", async (req, res) => {
 });
 
 router.post("/:id/note", async (req, res) => {
+  const { autore_id, contenuto, allegato_path } = req.body;
   try {
-    const { contenuto, autore_id } = req.body;
-    await db.query(
-        `INSERT INTO SchedeTecnicheNote (
-     scheda_tecnica_id, data, autore_id, contenuto, allegato_path
-   ) VALUES (?, NOW(), ?, ?, NULL)`,
-  [req.params.id, autore_id, contenuto]
-);
-    res.json({ success: true });
+    const [result] = await db.query(`
+      INSERT INTO SchedeTecnicheNote (scheda_tecnica_id, autore_id, contenuto, allegato_path)
+      VALUES (?, ?, ?, ?)
+    `, [
+      req.params.id,
+      autore_id,
+      contenuto,
+      allegato_path || null
+    ]);
+
+    const [newNote] = await db.query(`
+      SELECT n.*, r.nome AS autore_nome
+      FROM SchedeTecnicheNote n
+      LEFT JOIN risorse r ON n.autore_id = r.id
+      WHERE n.id = ?
+    `, [result.insertId]);
+
+    res.status(201).json(newNote[0]);
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Errore durante l'aggiunta della nota" });
+    console.error("Errore durante la creazione della nota:", err.message);
+    res.status(500).send("Errore durante la creazione della nota.");
   }
 });
+
 
 router.put("/note/:id", async (req, res) => {
+  const { contenuto, allegato_path } = req.body;
   try {
-    const { data, autore_id, contenuto, allegato_path, modifiche } = req.body;
+    await db.query(`
+      UPDATE SchedeTecnicheNote
+      SET contenuto = ?, allegato_path = ?, data_ultima_modifica = CURRENT_TIMESTAMP
+      WHERE id = ?
+    `, [contenuto, allegato_path || null, req.params.id]);
 
-    await db.query(
-      `UPDATE SchedeTecnicheNote 
-       SET data = ?, 
-           autore_id = ?, 
-           contenuto = ?, 
-           allegato_path = ?, 
-           modifiche = ?, 
-           data_ultima_modifica = NOW()
-       WHERE id = ?`,
-      [data, autore_id, contenuto, allegato_path || null, modifiche || '', req.params.id]
-    );
-
-    res.json({ success: true });
+    res.status(200).send("Nota aggiornata con successo.");
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Errore durante la modifica della nota" });
+    console.error("Errore aggiornamento nota:", err.message);
+    res.status(500).send("Errore aggiornamento nota.");
   }
 });
+
 
 
 router.delete("/note/:id", async (req, res) => {
   try {
-    await db.query("DELETE FROM SchedeTecnicheNote WHERE id = ?", [req.params.id]);
-    res.json({ success: true });
+    await db.query(`DELETE FROM SchedeTecnicheNote WHERE id = ?`, [req.params.id]);
+    res.status(200).send("Nota eliminata con successo.");
   } catch (err) {
-    res.status(500).json({ error: "Errore durante l'eliminazione della nota" });
+    console.error("Errore eliminazione nota:", err.message);
+    res.status(500).send("Errore eliminazione nota.");
   }
 });
-
-
 
 module.exports = router;

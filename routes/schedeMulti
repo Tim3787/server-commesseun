@@ -101,7 +101,7 @@ router.delete("/note/:id", async (req, res) => {
 
   try {
     // Elimina eventuali modifiche associate alla nota
-    await db.query(`DELETE FROM SchedeTecnicheNoteModifiche WHERE nota_id = ?`, [notaId]);
+    await db.query(`DELETE FROM SchedeModifiche WHERE nota_id = ?`, [notaId]);
 
     // Elimina la nota stessa
     await db.query(`DELETE FROM SchedeTecnicheNote WHERE id = ?`, [notaId]);

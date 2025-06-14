@@ -256,7 +256,9 @@ router.put("/:id", getUserIdFromToken, async (req, res) => {
     const message = `L'attività è stata modificata:
       - Commessa: ${numeroCommessa}
       - Tipo attività: ${tipoAttivita}
-      - Data inizio: ${new Date(data_inizio).toLocaleDateString()}.`;
+      - Data inizio: ${new Date(data_inizio).toLocaleDateString()}
+      - Durata: ${durata} giorni
+      .`;
     
 
     await inviaNotificheUtenti({

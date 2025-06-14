@@ -260,13 +260,14 @@ router.put("/:commessaId/reparti/:repartoId/stato", async (req, res) => {
       commessaId,
     ]);
 
-    const userIds = [44, 26];
-   const messaggio = `È stata aggiornato lo stato di una commessa: ${numero_commessa} | In consegna il: ${new Date(data_consegna).toLocaleDateString("it-IT")}  | nuovo stato:  ${stato}  `;
-    await inviaNotificheUtenti({
-     userIds,
-      titolo: "Nuova commessa",
-      messaggio,
-    });
+const userIds = [44, 26];
+const messaggio = `È stato aggiornato lo stato della commessa: ${numero_commessa} | In consegna il: ${new Date(data_consegna).toLocaleDateString("it-IT")} | Nuovo stato: ${stato}`;
+
+await inviaNotificheUtenti({
+  userIds,
+  titolo: "Cambiamento stato commessa",
+  messaggio,
+});
 
     res.status(200).send("Stato avanzamento aggiornato con successo.");
   } catch (error) {

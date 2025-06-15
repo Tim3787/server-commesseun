@@ -58,15 +58,23 @@ const getUserIdFromToken = (req, res, next) => {
 
 
 
-// Recupera tutte le notifiche di un utente
+// Recupera tutte le notifiche di un utente, con filtro opzionale per categoria
 router.get("/", getUserIdFromToken, async (req, res) => {
   const userId = req.userId;
+  const categoria = req.query.categoria;
 
   try {
-    const [notifications] = await db.query(
-      "SELECT * FROM notifications WHERE user_id = ? ORDER BY created_at DESC",
-      [userId]
-    );
+    let query = "SELECT * FROM notifications WHERE user_id = ?";
+    const params = [userId];
+
+    if (categoria) {
+      query += " AND categoria = ?";
+      params.push(categoria);
+    }
+
+    query += " ORDER BY created_at DESC";
+
+    const [notifications] = await db.query(query, params);
     res.json(notifications);
   } catch (err) {
     console.error(`Errore nel recupero delle notifiche per l'utente ${userId}:`, err);
@@ -92,7 +100,7 @@ router.get("/global", async (req, res) => {
 // Crea una nuova notifica per l'utente
 router.post("/", getUserIdFromToken, async (req, res) => {
   const userId = req.userId; // Ottieni l'id utente dal middleware
-  const { message } = req.body;
+  const { message, titolo = null, categoria = "generale" } = req.body;
 
   try {
     // Recupera il device_token associato all'utente
@@ -106,7 +114,12 @@ router.post("/", getUserIdFromToken, async (req, res) => {
     const deviceToken = user[0].device_token;
 
     // Inserisci la notifica nel database
-    await db.query("INSERT INTO notifications (user_id, message) VALUES (?, ?)", [userId, message]);
+
+
+await db.query(
+  "INSERT INTO notifications (user_id, message, is_read, created_at, category, titolo) VALUES (?, ?, false, NOW(), ?, ?)",
+  [userId, message, categoria, titolo]
+);
     console.log("Notifica salvata nel database per l'utente:", userId);
 
     // Invia la notifica push

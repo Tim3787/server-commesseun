@@ -259,7 +259,6 @@ router.put("/:id/stato", getUserIdFromToken, async (req, res) => {
   }
 });
 
-module.exports = router;
 
 
 

@@ -430,6 +430,7 @@ router.post("/", async (req, res) => {
      userIds,
       titolo: "Nuova commessa",
       messaggio,
+      categoria: "commessa" 
     });
 
     res.status(201).json({

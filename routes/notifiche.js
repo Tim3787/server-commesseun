@@ -249,6 +249,7 @@ router.put("/:id/stato", getUserIdFromToken, async (req, res) => {
       userIds: [managerId],
       titolo: "Aggiornamento attività",
       messaggio: message,
+      categoria: "Stato attività" 
     });
 
     res.status(200).send("Stato dell'attività aggiornato con successo.");

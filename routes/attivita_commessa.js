@@ -191,6 +191,7 @@ router.post("/", getUserIdFromToken, async (req, res) => {
       - Tipo attività: ${tipoAttivita}
       - Data inizio: ${new Date(data_inizio).toLocaleDateString("it-IT")}
       - Durata: ${durata} giorni
+
       .`;
 
     // Invia notifica (salva in DB + push)
@@ -198,6 +199,7 @@ router.post("/", getUserIdFromToken, async (req, res) => {
       userIds: [userId],
       titolo: "Ti è stata assegnata un'attività:",
       messaggio: message,
+      categoria: "attività" 
     });
     res.status(201).send("Attività assegnata con successo!");
   } catch (error) {
@@ -265,6 +267,7 @@ router.put("/:id", getUserIdFromToken, async (req, res) => {
       userIds: [userId],
       titolo: "E' stata modificata un'attività:",
       messaggio: message,
+      categoria: "attività" 
     });
 
     res.send("Attività aggiornata con successo e notifica inviata!");
@@ -320,6 +323,7 @@ router.delete("/:id", getUserIdFromToken, async (req, res) => {
       userIds: [userId],
       titolo: "Un'attività è stata eliminata:",
       messaggio: message,
+      categoria: "attività" 
     });
 
     res.send("Attività eliminata con successo!");

@@ -186,8 +186,8 @@ router.post("/", getUserIdFromToken, async (req, res) => {
     ]);
 
     // Crea il messaggio
-    const message = `
-      - Commessa: ${numeroCommessa}
+    const message = 
+     `- Commessa: ${numeroCommessa}
       - Tipo attività: ${tipoAttivita}
       - Data inizio: ${new Date(data_inizio).toLocaleDateString("it-IT")}
       - Durata: ${durata} giorni
@@ -196,7 +196,7 @@ router.post("/", getUserIdFromToken, async (req, res) => {
     // Invia notifica (salva in DB + push)
     await inviaNotificheUtenti({
       userIds: [userId],
-      titolo: "Nuova Attività Assegnata",
+      titolo: "Ti è stata assegnata un'attività:",
       messaggio: message,
     });
     res.status(201).send("Attività assegnata con successo!");
@@ -253,8 +253,8 @@ router.put("/:id", getUserIdFromToken, async (req, res) => {
     await db.query(sql, [commessa_id, risorsa_id, attivita_id, formattedDataInizio, durata, descrizione, stato, JSON.stringify(includedWeekends || []), id]);
 
     // Crea una notifica
-    const message = `
-      - Commessa: ${numeroCommessa}
+    const message =
+     `- Commessa: ${numeroCommessa}
       - Tipo attività: ${tipoAttivita}
       - Data inizio: ${new Date(data_inizio).toLocaleDateString("it-IT")}
       - Durata: ${durata} giorni
@@ -263,7 +263,7 @@ router.put("/:id", getUserIdFromToken, async (req, res) => {
 
     await inviaNotificheUtenti({
       userIds: [userId],
-      titolo: "L'attività è stata modificata:",
+      titolo: "E' stata modificata un'attività:",
       messaggio: message,
     });
 
@@ -312,13 +312,13 @@ router.delete("/:id", getUserIdFromToken, async (req, res) => {
     await db.query(sql, [id]);
 
     // Crea una notifica solo se esiste un utente associato
-    const message = `
-      - Commessa: ${numeroCommessa}
+    const message = 
+    ` - Commessa: ${numeroCommessa}
       - Tipo attività: ${tipoAttivita}`;
 
     await inviaNotificheUtenti({
       userIds: [userId],
-      titolo: "L'attività è stata eliminata:",
+      titolo: "Un'attività è stata eliminata:",
       messaggio: message,
     });
 

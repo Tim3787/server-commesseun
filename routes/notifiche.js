@@ -117,8 +117,9 @@ router.post("/", getUserIdFromToken, async (req, res) => {
 
 
 await db.query(
-  "INSERT INTO notifications (user_id, message) VALUES (?, ?)",
-  [userId, message]
+  `INSERT INTO notifications (user_id, message, titolo, category, is_read, created_at) 
+   VALUES (?, ?, ?, ?, false, NOW())`,
+  [userId, message, titolo, categoria]
 );
     console.log("Notifica salvata nel database per l'utente:", userId);
 

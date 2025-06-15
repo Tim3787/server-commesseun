@@ -7,8 +7,9 @@ const db = require("../config/db");
  * @param {number[]} options.userIds - Array di ID utente destinatari
  * @param {string} options.titolo - Titolo della notifica
  * @param {string} options.messaggio - Testo della notifica
+ * @param {string} [options.categoria] - Categoria della notifica (es. 'commessa', 'urgente', ecc.)
  */
-const inviaNotificheUtenti = async ({ userIds, titolo, messaggio }) => {
+const inviaNotificheUtenti = async ({ userIds, titolo, messaggio, categoria = "generale" }) => {
   if (!userIds || userIds.length === 0) return;
 
   try {
@@ -21,8 +22,8 @@ const inviaNotificheUtenti = async ({ userIds, titolo, messaggio }) => {
     // Salva ogni notifica nel database
     for (const utente of users) {
       await db.query(
-        "INSERT INTO notifications (user_id, message) VALUES (?, ?)",
-        [utente.id, messaggio]
+        "INSERT INTO notifications (user_id, titolo, message, category) VALUES (?, ?, ?)",
+        [utente.id, titolo, messaggio, categoria]
       );
     }
 
@@ -34,7 +35,7 @@ const pushMessages = users
     data: {
       title: titolo,
       body: messaggio,
-      tipo: "notifica", // opzionale per filtrare o differenziare
+      categoria: categoria,
     },
   }));
 

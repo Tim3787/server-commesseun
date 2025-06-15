@@ -201,7 +201,8 @@ router.put("/:id/data-consegna", async (req, res) => {
 
 
 
-
+/**
+  ANDAVA
 
 // Cambiare stato attuale di una commessa da pagina aggiorna stato
 router.put("/:commessaId/reparti/:repartoId/stato", async (req, res) => {
@@ -268,9 +269,90 @@ router.put("/:commessaId/reparti/:repartoId/stato", async (req, res) => {
   }
 });
 
+   */
 
+router.put("/:commessaId/reparti/:repartoId/stato", async (req, res) => {
+  const { commessaId, repartoId } = req.params;
+  const { stato_id, data_inizio, data_fine } = req.body;
 
+  const repartoIdInt = parseInt(repartoId, 10);
+  const statoIdInt = parseInt(stato_id, 10);
 
+  if (!stato_id) {
+    return res.status(400).send("Lo stato_id è obbligatorio.");
+  }
+
+  try {
+    // 1. Recupera la commessa
+    const [commessaResult] = await db.query("SELECT stati_avanzamento FROM commesse WHERE id = ?", [commessaId]);
+
+    if (!commessaResult || commessaResult.length === 0) {
+      return res.status(404).send("Commessa non trovata.");
+    }
+
+    let statiAvanzamento = commessaResult[0].stati_avanzamento;
+    if (typeof statiAvanzamento === "string") {
+      statiAvanzamento = JSON.parse(statiAvanzamento);
+    }
+
+    // 2. Controlla se esiste già lo stato
+    const esiste = statiAvanzamento.some(
+      (stato) => stato.reparto_id === repartoIdInt && stato.stato_id === statoIdInt
+    );
+
+    // 3. Se non esiste, recuperalo dal DB e aggiungilo
+    if (!esiste) {
+      const [statoDb] = await db.query(
+        `SELECT nome_stato, ordine FROM stati_avanzamento WHERE id = ? AND reparto_id = ?`,
+        [statoIdInt, repartoIdInt]
+      );
+
+      if (!statoDb.length) {
+        return res.status(404).send("Stato avanzamento non trovato nel database.");
+      }
+
+      const { nome_stato, ordine } = statoDb[0];
+
+      statiAvanzamento.push({
+        reparto_id: repartoIdInt,
+        stato_id: statoIdInt,
+        nome_stato,
+        ordine,
+        data_inizio: data_inizio ? new Date(data_inizio).toISOString().slice(0, 10) : null,
+        data_fine: data_fine ? new Date(data_fine).toISOString().slice(0, 10) : null,
+        isActive: false, // sarà attivato nel passaggio successivo
+      });
+    }
+
+    // 4. Aggiorna date e isActive
+    statiAvanzamento = statiAvanzamento.map((stato) => {
+      if (stato.reparto_id === repartoIdInt) {
+        if (stato.stato_id === statoIdInt) {
+          return {
+            ...stato,
+            isActive: true,
+            data_inizio: data_inizio ? new Date(data_inizio) : stato.data_inizio,
+            data_fine: data_fine ? new Date(data_fine) : stato.data_fine
+          };
+        } else {
+          return { ...stato, isActive: false };
+        }
+      }
+      return stato;
+    });
+
+    // 5. Salva
+    await db.query("UPDATE commesse SET stati_avanzamento = ? WHERE id = ?", [
+      JSON.stringify(statiAvanzamento),
+      commessaId,
+    ]);
+
+    res.status(200).send(esiste ? "Stato avanzamento aggiornato." : "Stato avanzamento creato e attivato.");
+  } catch (error) {
+    console.error("Errore durante l'aggiornamento dello stato avanzamento:", error);
+    res.status(500).send("Errore interno del server.");
+  }
+});
 
 
 
@@ -416,7 +498,7 @@ router.post("/assegna-attivita-predefinite", async (req, res) => {
   }
 });
 
- /* ANDAVA
+
 // Endpoint per aggiornare uno specifico stato avanzamento di una commessa
 router.put("/:commessaId/stati-avanzamento/:statoId", async (req, res) => {
   const { commessaId, statoId } = req.params;
@@ -451,91 +533,6 @@ router.put("/:commessaId/stati-avanzamento/:statoId", async (req, res) => {
     res.status(200).send("Stato avanzamento aggiornato con successo.");
   } catch (error) {
     console.error("Errore durante l'aggiornamento dello stato avanzamento:", error);
-    res.status(500).send("Errore interno del server.");
-  }
-});*/
-// Endpoint per aggiornare o creare uno stato avanzamento di una commessa
-router.put("/:commessaId/stati-avanzamento/:statoId", async (req, res) => {
-  const { commessaId, statoId } = req.params;
-  const { data_inizio, data_fine } = req.body;
-  const statoIdInt = parseInt(statoId, 10);
-
-  console.log(`>>> Richiesta per aggiornare stato ${statoIdInt} della commessa ${commessaId}`);
-
-  try {
-    const [commessaResult] = await db.query(
-      `SELECT stati_avanzamento FROM commesse WHERE id = ?`,
-      [commessaId]
-    );
-
-    if (!commessaResult.length) {
-      console.log("✖ Commessa non trovata");
-      return res.status(404).send("Commessa non trovata.");
-    }
-
-    let statiAvanzamento = [];
-    try {
-      statiAvanzamento = JSON.parse(commessaResult[0].stati_avanzamento || "[]");
-    } catch (error) {
-      console.log("✖ Errore parsing JSON:", error);
-      return res.status(500).send("Errore nel parsing degli stati avanzamento.");
-    }
-
-    console.log("✔ Stati attuali:", statiAvanzamento);
-
-    const index = statiAvanzamento.findIndex(s => s.stato_id === statoIdInt);
-    console.log("→ Stato trovato all’indice:", index);
-
-    if (index !== -1) {
-      // aggiorna lo stato esistente
-      statiAvanzamento[index] = {
-        ...statiAvanzamento[index],
-        data_inizio: data_inizio ?? statiAvanzamento[index].data_inizio,
-        data_fine:   data_fine   ?? statiAvanzamento[index].data_fine,
-      };
-
-      console.log("✔ Stato aggiornato:", statiAvanzamento[index]);
-    } else {
-      console.log("→ Stato non trovato, procedo a crearlo...");
-
-      // recupera i dati dello stato dal DB
-      const [statoRows] = await db.query(
-        `SELECT reparto_id, nome_stato, ordine FROM stati_avanzamento WHERE id = ?`,
-        [statoIdInt]
-      );
-
-      if (!statoRows.length) {
-        console.log("✖ Stato avanzamento non trovato nel DB");
-        return res.status(404).send("Stato avanzamento non trovato nel database.");
-      }
-
-      const { reparto_id, nome_stato, ordine } = statoRows[0];
-      const nuovoStato = {
-        reparto_id,
-        stato_id: statoIdInt,
-        nome_stato,
-        ordine,
-        data_inizio: data_inizio ?? new Date().toISOString().slice(0, 10),
-        data_fine: data_fine ?? null,
-        isActive: false,
-      };
-
-      statiAvanzamento.push(nuovoStato);
-      console.log("✔ Nuovo stato creato:", nuovoStato);
-    }
-
-    // salva tutto
-    await db.query(
-      `UPDATE commesse SET stati_avanzamento = ? WHERE id = ?`,
-      [JSON.stringify(statiAvanzamento), commessaId]
-    );
-
-    res.status(200).send(index !== -1
-      ? "Stato avanzamento aggiornato con successo."
-      : "Stato avanzamento creato con successo.");
-
-  } catch (error) {
-    console.error("✖ Errore generale:", error);
     res.status(500).send("Errore interno del server.");
   }
 });

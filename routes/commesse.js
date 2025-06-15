@@ -511,7 +511,7 @@ router.put("/:commessaId/stati-avanzamento/:statoId", async (req, res) => {
         ordine,
         data_inizio: data_inizio ?? null,
         data_fine:   data_fine   ?? null,
-        isActive: false, // lo lasci non attivo se non specificato
+        isActive: true, // lo lasci non attivo se non specificato
       });
     }
 

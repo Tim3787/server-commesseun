@@ -21,10 +21,11 @@ const inviaNotificheUtenti = async ({ userIds, titolo, messaggio, categoria = "g
 
     // Salva ogni notifica nel database
     for (const utente of users) {
-   await db.query(
-  "INSERT INTO notifications (user_id, titolo, message, category) VALUES (?, ?, ?, ?)",
+await db.query(
+  "INSERT INTO notifications (user_id, titolo, message, category, is_read, created_at) VALUES (?, ?, ?, ?, false, NOW())",
   [utente.id, titolo, messaggio, categoria]
 );
+    }
 
     // Crea i messaggi push per chi ha token
 const pushMessages = users

@@ -70,3 +70,6 @@ const pushMessages = users
     console.error("Errore nell'invio delle notifiche:", err);
   }
 };
+module.exports = {
+  inviaNotificheUtenti,
+}

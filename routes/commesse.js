@@ -422,7 +422,8 @@ router.post("/", async (req, res) => {
       ordine: stato.ordine,
       data_inizio: null,
       data_fine: null,
-      isActive: stato.nome_stato.trim().toLowerCase() === (stato_iniziale[stato.reparto_id] || "").trim().toLowerCase(),
+      isActive: stato.nome_stato.trim().toLowerCase() === "in entrata"
+
     }));
 
     // Continua con l'inserimento della commessa

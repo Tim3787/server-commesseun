@@ -8,6 +8,7 @@ const db = require("../config/db");
  * @param {string} options.titolo - Titolo della notifica
  * @param {string} options.messaggio - Testo della notifica
  * @param {string} [options.categoria] - Categoria della notifica (es. 'commessa', 'urgente', ecc.)
+* @param {boolean}  [options.push=true]  Se false, NON manda il push
  */
 const inviaNotificheUtenti = async ({ userIds, titolo, messaggio, categoria = "generale" }) => {
   if (!userIds || userIds.length === 0) return;
@@ -39,22 +40,33 @@ const pushMessages = users
     },
   }));
 
-    // Invia le notifiche push
-    const results = await Promise.allSettled(
-      pushMessages.map(m => admin.messaging().send(m))
-    );
+  // 3. (opzionale) push
+    if (push) {
+      const pushMessages = users
+        .filter(u => u.device_token)
+        .map(u => ({
+          token: u.device_token,
+          data: {
+            title: titolo,
+            body: messaggio,
+            categoria
+          }
+        }));
 
-    // Log degli errori (opzionale)
-    results.forEach((res, i) => {
-      if (res.status === "rejected") {
-        console.warn(`Errore notifica push a ${pushMessages[i].token}:`, res.reason);
-      }
-    });
+      const results = await Promise.allSettled(
+        pushMessages.map(m => admin.messaging().send(m))
+      );
+
+      results.forEach((r, i) => {
+        if (r.status === "rejected") {
+          console.warn(
+            `Errore notifica push a ${pushMessages[i].token}:`,
+            r.reason
+          );
+        }
+      });
+    }
   } catch (err) {
     console.error("Errore nell'invio delle notifiche:", err);
   }
-};
-
-module.exports = {
-  inviaNotificheUtenti,
 };

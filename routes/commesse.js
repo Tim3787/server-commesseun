@@ -430,7 +430,8 @@ router.post("/", async (req, res) => {
      userIds,
       titolo: "Nuova commessa",
       messaggio,
-      categoria: "commessa" 
+      categoria: "Commessa",
+      push: true  
     });
 
     res.status(201).json({
@@ -574,6 +575,8 @@ const nomeStato = statoInfo.length > 0 ? statoInfo[0].nome_stato : `Stato ${stat
       userIds,
       titolo: "Cambiamento stato commessa",
       messaggio,
+      categoria: "Commessa",
+      push: true  
     });
 
     res.status(200).json({ message: "Stato della commessa aggiornato con successo." });

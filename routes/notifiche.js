@@ -327,6 +327,18 @@ router.get("/unread", getUserIdFromToken, async (req, res) => {
   }
 });
 
+// Segna tutte le notifiche come lette per l'utente autenticato
+router.put("/read/all", getUserIdFromToken, async (req, res) => {
+  const userId = req.userId;
+
+  try {
+    await db.query("UPDATE notifications SET is_read = TRUE WHERE user_id = ?", [userId]);
+    res.status(200).send("Tutte le notifiche segnate come lette.");
+  } catch (err) {
+    console.error("Errore durante l'aggiornamento delle notifiche:", err);
+    res.status(500).send("Errore durante il contrassegno delle notifiche come lette.");
+  }
+});
 
 
 module.exports = router;

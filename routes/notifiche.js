@@ -181,7 +181,6 @@ router.put("/:id/note", getUserIdFromToken, async (req, res) => {
 router.put("/:id/stato", getUserIdFromToken, async (req, res) => {
   const { id } = req.params; // Ottieni l'id dell'attività
   const { stato } = req.body; // Stato richiesto: ad esempio 1 = Iniziata, 2 = Completata
-  const userId = req.userId;
 
   if (stato === undefined) {
     return res.status(400).send("Il campo 'stato' è obbligatorio.");
@@ -212,13 +211,6 @@ router.put("/:id/stato", getUserIdFromToken, async (req, res) => {
     const numeroCommessa = activity[0].numero_commessa;
     const tipoAttivita = activity[0].nome_attivita;
     const repartoId = activity[0].reparto_id;
-const [risorsaInfo] = await db.query(
-  "SELECT nome FROM risorse WHERE id_utente = ?",
-  [userId]
-);
-const nomeRisorsa = risorsaInfo.length > 0 ? risorsaInfo[0].nome : "Utente sconosciuto";
-
-
     // Non serve recuperare risorsaId in questo caso
 
     console.log("Dati attività recuperati:", activity[0]);
@@ -250,7 +242,7 @@ const nomeRisorsa = risorsaInfo.length > 0 ? risorsaInfo[0].nome : "Utente scono
 
     // Costruisci il messaggio
     const statoStr = stato === 1 ? "Iniziata" : stato === 2 ? "Completata" : `Aggiornata (${stato})`;
-    const message = `${nomeRisorsa} ha aggiornato lo stato dell'attività ${tipoAttivita} della commessa ${numeroCommessa} a: ${statoStr}.`;
+    const message = `Lo stato dell'attività ${tipoAttivita} della commessa ${numeroCommessa} è stato aggiornato a: ${statoStr}.`;
 
     // Usa il nuovo sistema centralizzato
     await inviaNotificheUtenti({
@@ -335,18 +327,6 @@ router.get("/unread", getUserIdFromToken, async (req, res) => {
   }
 });
 
-// Segna tutte le notifiche come lette per l'utente autenticato
-router.put("/read/all", getUserIdFromToken, async (req, res) => {
-  const userId = req.userId;
-
-  try {
-    await db.query("UPDATE notifications SET is_read = TRUE WHERE user_id = ?", [userId]);
-    res.status(200).send("Tutte le notifiche segnate come lette.");
-  } catch (err) {
-    console.error("Errore durante l'aggiornamento delle notifiche:", err);
-    res.status(500).send("Errore durante il contrassegno delle notifiche come lette.");
-  }
-});
 
 
 module.exports = router;

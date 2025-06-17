@@ -181,6 +181,7 @@ router.put("/:id/note", getUserIdFromToken, async (req, res) => {
 router.put("/:id/stato", getUserIdFromToken, async (req, res) => {
   const { id } = req.params; // Ottieni l'id dell'attività
   const { stato } = req.body; // Stato richiesto: ad esempio 1 = Iniziata, 2 = Completata
+  const userId = req.userId;
 
   if (stato === undefined) {
     return res.status(400).send("Il campo 'stato' è obbligatorio.");
@@ -211,6 +212,13 @@ router.put("/:id/stato", getUserIdFromToken, async (req, res) => {
     const numeroCommessa = activity[0].numero_commessa;
     const tipoAttivita = activity[0].nome_attivita;
     const repartoId = activity[0].reparto_id;
+const [risorsaInfo] = await db.query(
+  "SELECT nome FROM risorse WHERE id_utente = ?",
+  [userId]
+);
+const nomeRisorsa = risorsaInfo.length > 0 ? risorsaInfo[0].nome : "Utente sconosciuto";
+
+
     // Non serve recuperare risorsaId in questo caso
 
     console.log("Dati attività recuperati:", activity[0]);
@@ -242,7 +250,7 @@ router.put("/:id/stato", getUserIdFromToken, async (req, res) => {
 
     // Costruisci il messaggio
     const statoStr = stato === 1 ? "Iniziata" : stato === 2 ? "Completata" : `Aggiornata (${stato})`;
-    const message = `Lo stato dell'attività ${tipoAttivita} della commessa ${numeroCommessa} è stato aggiornato a: ${statoStr}.`;
+    const message = `${nomeRisorsa} ha aggiornato lo stato dell'attività ${tipoAttivita} della commessa ${numeroCommessa} a: ${statoStr}.`;
 
     // Usa il nuovo sistema centralizzato
     await inviaNotificheUtenti({

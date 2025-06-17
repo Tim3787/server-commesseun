@@ -23,24 +23,6 @@ const formatDate = (dateString) => {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
 };
 
-// Middleware per ottenere l'id utente dal token JWT
-const getUserIdFromToken = (req, res, next) => {
-  const authHeader = req.headers["authorization"];
-  if (!authHeader || !authHeader.startsWith("Bearer ")) {
-    return res.status(401).send("Accesso negato. Nessun token fornito.");
-  }
-
-  const token = authHeader.split(" ")[1];
-  try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    req.userId = decoded.id; // Salva l'id utente decodificato nella richiesta
-    next();
-  } catch (err) {
-    res.status(403).send("Token non valido.");
-  }
-};
-
-
 // Usa `formatDate` in GestioneStatiAvanzamento.js
 const handleDateFormatting = (data) => {
   // Verifica che la data sia presente
@@ -558,10 +540,9 @@ router.put("/:commessaId/stati-avanzamento/:statoId", async (req, res) => {
 });
 
 // Modificare uno stato esistente della commessa
-router.put("/:id/stato", getUserIdFromToken, async (req, res) => {
+router.put("/:id/stato",  async (req, res) => {
   const { id } = req.params;
   const { stato_commessa } = req.body;
-const userId = req.userId;
 
   if (!stato_commessa) {
     return res.status(400).json({ error: "Lo stato della commessa è richiesto." });
@@ -581,13 +562,6 @@ const [statoInfo] = await db.query("SELECT nome_stato FROM stati_commessa WHERE 
 
 const nomeStato = statoInfo.length > 0 ? statoInfo[0].nome_stato : `Stato ${stato_commessa}`;
 
-// Recupera nome risorsa da userId
-    const [risorsaInfo] = await db.query(
-      "SELECT nome FROM risorse WHERE id_utente = ?",
-      [userId]
-    );
-    const nomeRisorsa = risorsaInfo.length > 0 ? risorsaInfo[0].nome : "Utente sconosciuto";
-
     if (!commessaInfo.length) {
       return res.status(404).json({ error: "Commessa non trovata dopo l'aggiornamento." });
     }
@@ -595,8 +569,7 @@ const nomeStato = statoInfo.length > 0 ? statoInfo[0].nome_stato : `Stato ${stat
     const { numero_commessa, data_consegna } = commessaInfo[0];
     const userIds = [44, 26];
 
-    const messaggio = `Lo stato della commessa ${numero_commessa} è stato aggiornato da ${nomeRisorsa}. Nuovo stato: ${nomeStato}. Consegna prevista: ${new Date(data_consegna).toLocaleDateString("it-IT")}`;
-
+    const messaggio = `È stato aggiornato lo stato della commessa: ${numero_commessa} | In consegna il: ${new Date(data_consegna).toLocaleDateString("it-IT")} | Nuovo stato: ${nomeStato}`;
 
     await inviaNotificheUtenti({
       userIds,

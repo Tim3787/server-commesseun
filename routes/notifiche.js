@@ -189,19 +189,21 @@ router.put("/:id/stato", getUserIdFromToken, async (req, res) => {
   try {
     // Recupera i dettagli dell'attività
     const [activity] = await db.query(`
-      SELECT 
-        ac.id, 
-        ac.commessa_id, 
-        ac.risorsa_id, 
-        ac.attivita_id,
-        c.numero_commessa, 
-        ad.nome_attivita, 
-        r.reparto_id
-      FROM attivita_commessa ac
-      JOIN commesse c ON ac.commessa_id = c.id
-      JOIN attivita ad ON ac.attivita_id = ad.id
-      JOIN risorse r ON ac.risorsa_id = r.id
-      WHERE ac.id = ?
+SELECT 
+  ac.id, 
+  ac.commessa_id, 
+  ac.risorsa_id, 
+  ac.attivita_id,
+  c.numero_commessa, 
+  ad.nome_attivita, 
+  r.reparto_id,
+  u.username AS nome_risorsa
+FROM attivita_commessa ac
+JOIN commesse c ON ac.commessa_id = c.id
+JOIN attivita ad ON ac.attivita_id = ad.id
+JOIN risorse r ON ac.risorsa_id = r.id
+JOIN users u ON r.id = u.risorsa_id
+WHERE ac.id = ?
     `, [id]);
 
     if (activity.length === 0) {
@@ -241,8 +243,9 @@ router.put("/:id/stato", getUserIdFromToken, async (req, res) => {
     }
 
     // Costruisci il messaggio
-    const statoStr = stato === 1 ? "Iniziata" : stato === 2 ? "Completata" : `Aggiornata (${stato})`;
-    const message = `Lo stato dell'attività ${tipoAttivita} della commessa ${numeroCommessa} è stato aggiornato a: ${statoStr}.`;
+ const nomeRisorsa = activity[0].nome_risorsa;
+const statoStr = stato === 1 ? "Iniziata" : stato === 2 ? "Completata" : `Aggiornata (${stato})`;
+const message = `${nomeRisorsa} ha aggiornato lo stato dell'attività ${tipoAttivita} della commessa ${numeroCommessa} a: ${statoStr}.`;
 
     // Usa il nuovo sistema centralizzato
     await inviaNotificheUtenti({

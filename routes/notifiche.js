@@ -328,7 +328,7 @@ router.get("/unread", getUserIdFromToken, async (req, res) => {
 });
 
 router.put("/read/all", getUserIdFromToken, async (req, res) => {
-  const userId = req.user.id;
+  const userId = req.userId;
   try {
     await db.query("UPDATE notifications SET is_read = TRUE WHERE user_id = ?", [userId]);
     res.status(200).send("Tutte le notifiche contrassegnate come lette.");

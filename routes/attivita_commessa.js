@@ -256,7 +256,7 @@ router.put("/:id", getUserIdFromToken, async (req, res) => {
     await db.query(sql, [commessa_id, risorsa_id, attivita_id, formattedDataInizio, durata, descrizione, stato, JSON.stringify(includedWeekends || []), id]);
 
     // Crea una notifica
-    
+    if (false) {
      const message =`- Commessa: ${numeroCommessa}
       - Tipo attività: ${tipoAttivita}
       - Data inizio: ${new Date(data_inizio).toLocaleDateString("it-IT")}
@@ -271,7 +271,7 @@ router.put("/:id", getUserIdFromToken, async (req, res) => {
       categoria: "Attività",
       push: false  
     });
-
+}
     res.send("Attività aggiornata con successo e notifica inviata!");
   } catch (err) {
     console.error("Errore durante la modifica dell'attività:", err);

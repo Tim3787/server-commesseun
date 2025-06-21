@@ -247,7 +247,7 @@ WHERE ac.id = ?
 const statoStr = stato === 1 ? "Iniziata" : stato === 2 ? "Completata" : `Aggiornata (${stato})`;
 const message = `${nomeRisorsa} ha aggiornato lo stato dell'attività ${tipoAttivita} della commessa ${numeroCommessa} a: ${statoStr}.`;
 
-    // Usa il nuovo sistema centralizzato
+if (false) {
     await inviaNotificheUtenti({
       userIds: [managerId],
       titolo: "Aggiornamento attività",
@@ -255,6 +255,15 @@ const message = `${nomeRisorsa} ha aggiornato lo stato dell'attività ${tipoAtti
       categoria: "Stato attività",
       push: true   
     });
+ }
+
+await inviaNotificaCategoria({
+  categoria: "Stato attività",
+  titolo: "Aggiornamento attività",
+  messaggio: message,
+  commessaId: activity[0].commessa_id,
+  repartoId: repartoId,
+});
 
     res.status(200).send("Stato dell'attività aggiornato con successo.");
   } catch (err) {

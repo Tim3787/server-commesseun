@@ -10,7 +10,7 @@ router.get("/", async (req, res) => {
     const [rows] = await db.query(`
       SELECT nd.id, nd.categoria, nd.id_utente, u.nome
       FROM notifiche_destinatari nd
-      JOIN Utenti u ON nd.id_utente = u.id
+      JOIN users u ON nd.id_utente = u.id
     `);
     res.json(rows);
   } catch (err) {
@@ -39,7 +39,7 @@ router.post("/", async (req, res) => {
     const [newRows] = await db.query(`
       SELECT nd.id, nd.categoria, nd.id_utente, u.nome
       FROM notifiche_destinatari nd
-      JOIN Utenti u ON nd.id_utente = u.id
+      JOIN users u ON nd.id_utente = u.id
       WHERE nd.id IN (?)
     `, [insertedIds]);
 

@@ -67,8 +67,8 @@ app.use("/api/sale-riunioni", PrenotazioneSaleRoutes);
 app.use("/api/commessa-dettagli", CommessaDettagliRoutes);
 app.use('/api/schedeTecniche', schedeTecnicheRoutes);
 app.use('/api/schede-multi', schedeMultiRoutes);
-app.use('/api/notifichePreferenzeRoute', notifichePreferenzeRoute);
-app.use('/api/notificheDestinatariRoute', notificheDestinatariRoute);
+app.use('/api/notifichePreferenze', notifichePreferenzeRoute);
+app.use('/api/notificheDestinatari', notificheDestinatariRoute);
 app.use("/uploads", express.static("uploads")); // Per servire i file statici
 app.use("/api/upload", uploadRoute); // Per gestire /api/upload-image
 

@@ -29,61 +29,44 @@ const inviaNotificheUtenti = async ({
       "SELECT id, device_token, email FROM users WHERE id IN (?)",
       [userIds]
     );
+for (const utente of utenti) {
+  const prefs = preferenze.find(p => p.user_id === utente.id);
 
-    for (const utente of utenti) {
-      const prefs = preferenze.find(p => p.user_id === utente.id);
+  const preferiscePush = prefs ? prefs.via_push === 1 : false;
+  const preferisceEmail = prefs ? prefs.via_email === 1 : false;
 
-      const preferiscePush = prefs ? prefs.push === 1 : false;
-      const preferisceEmail = prefs ? prefs.email === 1 : false;
+  // Salva sempre nel database
+  await db.query(
+    "INSERT INTO notifications (user_id, titolo, message, category, is_read, created_at) VALUES (?, ?, ?, ?, false, NOW())",
+    [utente.id, titolo, messaggio, categoria]
+  );
 
-      // Salva in ogni caso nel database
-      await db.query(
-        "INSERT INTO notifications (user_id, titolo, message, category, is_read, created_at) VALUES (?, ?, ?, ?, false, NOW())",
-        [utente.id, titolo, messaggio, categoria]
-      );
+  if (preferiscePush && utente.device_token) {
+    console.log(`🚀 Invia push a utente ${utente.id}`);
+    console.log(`🔑 Titolo: ${titolo}`);
+    console.log(`📩 Messaggio: ${messaggio}`);
+    console.log(`📱 Token: ${utente.device_token}`);
 
-      // Se vuole anche push ed è disponibile il device token
-      if (preferiscePush && utente.device_token) {
-          console.log(`🚀 Invia push a utente ${utente.id}`);
-  console.log(`🔑 Titolo: ${titolo}`);
-  console.log(`📩 Messaggio: ${messaggio}`);
-  console.log(`📱 Token: ${utente.device_token}`);
-  console.log("👉 Provo a inviare a Firebase con:", {
-  token: utente.device_token,
-  data: {
-    title: titolo,
-    body: messaggio,
-    categoria: categoria,
-  }
-});
+    const msg = {
+      token: utente.device_token,
+      data: {
+        title: titolo,
+        body: messaggio,
+        categoria: categoria,
+      },
+    };
 
-        const msg = {
-          token: utente.device_token,
-          data: {
-            title: titolo,
-            body: messaggio,
-            categoria: categoria,
-          },
-        };
-
-        try {
-          await admin.messaging().send(msg);
-        } catch (err) {
-          console.warn(`Errore notifica push a utente ${utente.id}:`, err.message);
-        }
-      }
-
-      // Se vuole anche email (puoi implementarla dopo)
-      if (preferisceEmail && utente.email) {
-        // TODO: implementa invio email se necessario
-        console.log(`(Mock) Invio email a ${utente.email}: ${titolo}`);
-      }
+    try {
+      await admin.messaging().send(msg);
+    } catch (err) {
+      console.warn(`Errore notifica push a utente ${utente.id}:`, err.message);
     }
-
-  } catch (err) {
-    console.error("Errore nell'invio delle notifiche:", err);
   }
-};
+
+  if (preferisceEmail && utente.email) {
+    console.log(`(Mock) Invio email a ${utente.email}: ${titolo}`);
+  }
+}
 
 const inviaNotificaCategoria = async ({ 
   categoria, 

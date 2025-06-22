@@ -59,6 +59,9 @@ const inviaNotificheUtenti = async ({
 
     try {
       await admin.messaging().send(msg);
+      console.log(`✅ Notifica push inviata con successo a utente ${utente.id}`);
+console.warn(`⚠️ Errore notifica push a utente ${utente.id}:`, err.message);
+
     } catch (err) {
       console.warn(`Errore notifica push a utente ${utente.id}:`, err.message);
     }

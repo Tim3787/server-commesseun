@@ -78,55 +78,61 @@ const inviaNotificaCategoria = async ({
   messaggio, 
   commessaId = null, 
   repartoId = null, 
-  includiGlobali = false 
+  includiGlobali = false
 }) => {
   try {
     console.log("➡️ inviaNotificaCategoria → categoria:", categoria, " | repartoId:", repartoId, " | includiGlobali:", includiGlobali);
 
-    // 1. Query destinatari dinamica
-    let queryDestinatari = `
+    // 1. Carica i destinatari
+    const [destinatari] = await db.query(`
       SELECT user_id, reparto_id, ruolo
       FROM notifiche_destinatari
       WHERE categoria = ?
         AND (commessa_id IS NULL OR commessa_id = ?)
-    `;
-    const queryParams = [categoria, commessaId];
+    `, [categoria, commessaId]);
 
-    if (includiGlobali) {
-      queryDestinatari += ` AND (reparto_id IS NULL OR reparto_id = ?)`;
-    } else {
-      queryDestinatari += ` AND reparto_id = ?`;
-    }
-    queryParams.push(repartoId);
-
-    const [destinatari] = await db.query(queryDestinatari, queryParams);
-    console.log("🎯 Destinatari trovati:", destinatari.length);
+    console.log("📥 Destinatari trovati in tabella:", destinatari.length);
 
     if (destinatari.length === 0) return;
 
-    // 2. Tutti gli utenti con reparto/ruolo
+    // 2. Tutti gli utenti
     const [utenti] = await db.query(`
-      SELECT u.id, ru.reparto_id, u.role_id, u.device_token, u.email, r.role_name
+      SELECT u.id, ru.reparto_id, r.role_name, u.device_token, u.email
       FROM users u
       LEFT JOIN risorse ru ON ru.id = u.risorsa_id
       LEFT JOIN roles r ON u.role_id = r.id
     `);
 
-    // 3. Filtra utenti destinatari
-    const userIds = utenti
-      .filter(u =>
-        destinatari.some(d =>
-          (d.user_id && d.user_id === u.id) ||
-          (d.reparto_id && d.reparto_id === u.reparto_id) ||
-          (d.ruolo && d.ruolo === u.role_name)
+    // 3. Filtro logico
+    let userIds = [];
+
+    if (includiGlobali) {
+      userIds = utenti
+        .filter(u =>
+          destinatari.some(d =>
+            (d.user_id && d.user_id === u.id) ||
+            (d.reparto_id && d.reparto_id === u.reparto_id) ||
+            (d.ruolo && d.ruolo === u.role_name)
+          )
         )
-      )
-      .map(u => u.id);
+        .map(u => u.id);
+    } else {
+      userIds = utenti
+        .filter(u =>
+          destinatari.some(d =>
+            d.user_id === u.id && u.reparto_id === repartoId
+          )
+        )
+        .map(u => u.id);
+    }
 
     const uniqueUserIds = [...new Set(userIds)];
-    console.log("👥 Utenti destinatari finali:", uniqueUserIds);
+    console.log("✅ Utenti finali da notificare:", uniqueUserIds);
 
-    if (uniqueUserIds.length === 0) return;
+    if (uniqueUserIds.length === 0) {
+      console.log("📭 Nessun utente finale da notificare.");
+      return;
+    }
 
     // 4. Preferenze
     const [preferenze] = await db.query(`
@@ -143,24 +149,23 @@ const inviaNotificaCategoria = async ({
       };
     }
 
-    // 5. Info utenti
+    // 5. Utenti completi
     const [utentiFinali] = await db.query(`
       SELECT id, device_token, email
       FROM users
       WHERE id IN (?)
     `, [uniqueUserIds]);
 
-    // 6. Invio
+    // 6. Invia notifiche
     for (const u of utentiFinali) {
       const prefs = prefsMap[u.id] || { via_push: true, via_email: false };
 
-      // Salva nel DB
       await db.query(`
         INSERT INTO notifications (user_id, titolo, message, category, is_read, created_at)
         VALUES (?, ?, ?, ?, false, NOW())
       `, [u.id, titolo, messaggio, categoria]);
 
-      console.log(`📩 Notifica a: ${u.id} | Titolo: ${titolo}`);
+      console.log(`📨 Notifica DB inserita per utente: ${u.id}`);
 
       if (prefs.via_push && u.device_token) {
         try {
@@ -169,14 +174,14 @@ const inviaNotificaCategoria = async ({
             notification: { title: titolo, body: messaggio },
             data: { categoria },
           });
-          console.log(`📲 Push inviata a ${u.id}`);
+          console.log(`📲 Push inviata a utente: ${u.id}`);
         } catch (err) {
           console.warn(`⚠️ Errore push utente ${u.id}:`, err.message);
         }
       }
 
       if (prefs.via_email && u.email) {
-        console.log(`📧 (Mock Email) a ${u.email}: ${titolo} - ${messaggio}`);
+        console.log(`[✉️ Fake Email] ${u.email}: ${titolo} - ${messaggio}`);
       }
     }
 
@@ -184,7 +189,6 @@ const inviaNotificaCategoria = async ({
     console.error("❌ Errore in inviaNotificaCategoria:", err);
   }
 };
-
 
 
 module.exports = {

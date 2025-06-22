@@ -313,8 +313,7 @@ router.delete("/:id", async (req, res) => {
   }
 });
 
-
-// Rotta per ottenere utenti
+// Rotta per ottenere utenti con nome della risorsa
 router.get("/", async (req, res) => {
   const sql = `
     SELECT 
@@ -323,9 +322,11 @@ router.get("/", async (req, res) => {
       users.email, 
       users.role_id, 
       users.risorsa_id, 
-      roles.role_name
+      roles.role_name,
+      risorse.nome AS nome_risorsa
     FROM users
     LEFT JOIN roles ON users.role_id = roles.id
+    LEFT JOIN risorse ON users.risorsa_id = risorse.id
   `;
   try {
     const [results] = await db.query(sql);
@@ -335,15 +336,7 @@ router.get("/", async (req, res) => {
     res.status(500).send("Errore durante il recupero degli utenti.");
   }
 });
-router.get("/roles", async (req, res) => {
-  try {
-    const [results] = await db.query("SELECT * FROM roles");
-    res.json(results);
-  } catch (error) {
-    console.error("Errore durante il recupero dei ruoli:", error);
-    res.status(500).send("Errore durante il recupero dei ruoli.");
-  }
-});
+
 
 router.put("/:id", async (req, res) => {
   const { id } = req.params;

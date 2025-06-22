@@ -352,4 +352,20 @@ router.put("/read/all", getUserIdFromToken, async (req, res) => {
 });
 
 
+// GET /api/notifiche/categorie
+router.get("/categorie", async (req, res) => {
+  try {
+    const [rows] = await db.query(`
+      SELECT DISTINCT category FROM notifications
+      WHERE category IS NOT NULL AND category != ''
+      ORDER BY category
+    `);
+    res.json(rows.map(r => r.category));
+  } catch (err) {
+    console.error("Errore nel recupero categorie:", err);
+    res.status(500).send("Errore nel recupero delle categorie.");
+  }
+});
+
+
 module.exports = router;

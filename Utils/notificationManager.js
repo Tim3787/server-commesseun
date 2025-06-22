@@ -29,7 +29,8 @@ const inviaNotificheUtenti = async ({
       "SELECT id, device_token, email FROM users WHERE id IN (?)",
       [userIds]
     );
-for (const utente of utenti) {
+
+    for (const utente of utenti) {
   const prefs = preferenze.find(p => p.user_id === utente.id);
 
   const preferiscePush = prefs ? prefs.via_push === 1 : false;
@@ -67,6 +68,11 @@ for (const utente of utenti) {
     console.log(`(Mock) Invio email a ${utente.email}: ${titolo}`);
   }
 }
+
+  } catch (err) {
+    console.error("❌ Errore generale in inviaNotificheUtenti:", err);
+  }
+};
 
 const inviaNotificaCategoria = async ({ 
   categoria, 

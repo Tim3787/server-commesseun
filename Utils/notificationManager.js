@@ -121,7 +121,7 @@ LEFT JOIN roles r ON u.role_id = r.id
 
     // 4. Prendi preferenze notifica per categoria
     const [preferenze] = await db.query(`
-      SELECT user_id, via_push, via_email, solo_app
+      SELECT user_id, via_push, via_email
       FROM notifiche_preferenze
       WHERE categoria = ? AND user_id IN (?)
     `, [categoria, uniqueUserIds]);
@@ -130,8 +130,7 @@ LEFT JOIN roles r ON u.role_id = r.id
     for (const pref of preferenze) {
       prefsMap[pref.user_id] = {
         via_push: !!pref.via_push,
-        via_email: !!pref.via_email,
-        solo_app: !!pref.solo_app
+        via_email: !!pref.via_email
       };
     }
 
@@ -144,7 +143,7 @@ LEFT JOIN roles r ON u.role_id = r.id
 
     // 6. Invio Notifiche
     for (const u of utentiFinali) {
-      const prefs = prefsMap[u.id] || { via_push: true, via_email: false, solo_app: false };
+      const prefs = prefsMap[u.id] || { via_push: true, via_email: false};
 
       // a. Salva sempre nel DB
       await db.query(`

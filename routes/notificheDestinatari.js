@@ -34,20 +34,25 @@ router.post("/", async (req, res) => {
 
   try {
     const values = idUtenti.map(id => [categoria, id]);
+
     const [result] = await db.query(
-      "INSERT INTO notifiche_destinatari (categoria, id_utente) VALUES ?",
+      "INSERT INTO notifiche_destinatari (categoria, user_id) VALUES ?",
       [values]
     );
 
     const insertId = result.insertId;
     const insertedIds = Array.from({ length: idUtenti.length }, (_, i) => insertId + i);
 
-    const [newRows] = await db.query(`
-      SELECT nd.id, nd.categoria, nd.id_utente, u.nome
+    // Recupera i nuovi record con join
+    const [newRows] = await db.query(
+      `
+      SELECT nd.id, nd.categoria, nd.user_id, u.username AS nome
       FROM notifiche_destinatari nd
-      JOIN users u ON nd.id_utente = u.id
-      WHERE nd.id IN (?)
-    `, [insertedIds]);
+      JOIN users u ON nd.user_id = u.id
+      WHERE nd.id IN (${insertedIds.map(() => '?').join(',')})
+      `,
+      insertedIds
+    );
 
     res.status(201).json({ message: "Assegnazioni salvate", newAssignments: newRows });
   } catch (err) {
@@ -55,6 +60,7 @@ router.post("/", async (req, res) => {
     res.status(500).send("Errore nel salvataggio assegnazioni.");
   }
 });
+
 
 router.delete("/:id", async (req, res) => {
   const { id } = req.params;

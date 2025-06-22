@@ -462,5 +462,14 @@ router.post("/device-token", getUserIdFromToken, async (req, res) => {
   }
 });
 
-
+router.get("/roles", async (req, res) => {
+  try {
+    const [rows] = await db.query("SELECT DISTINCT ruolo FROM users WHERE ruolo IS NOT NULL");
+    const ruoli = rows.map((r) => r.ruolo);
+    res.json(ruoli);
+  } catch (err) {
+    console.error("Errore nel recupero dei ruoli:", err);
+    res.status(500).send("Errore nel recupero dei ruoli");
+  }
+});
 module.exports = router;

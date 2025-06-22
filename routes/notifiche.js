@@ -228,20 +228,6 @@ WHERE ac.id = ?
     }
 
 
-    // Associazione reparto → managerId
-    const managerMapping = {
-      1: 26,
-      2: 44,
-      // Aggiungi altri se necessario
-    };
-
-    const managerId = managerMapping[repartoId];
-
-    if (!managerId) {
-      console.log("Nessun manager associato per il reparto:", repartoId);
-      return res.status(200).send("Stato aggiornato ma nessun manager notificato.");
-    }
-
     // Costruisci il messaggio
  const nomeRisorsa = activity[0].nome_risorsa;
 const statoStr = stato === 1 ? "Iniziata" : stato === 2 ? "Completata" : `Aggiornata (${stato})`;

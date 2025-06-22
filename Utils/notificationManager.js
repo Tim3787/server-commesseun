@@ -84,25 +84,46 @@ const inviaNotificheUtenti = async ({
  */
 const inviaNotificaCategoria = async ({ categoria, titolo, messaggio, commessaId = null, repartoId = null }) => {
   try {
-    // 1. Chi riceve questa categoria
+    // 1. Prendi tutti i destinatari (user_id, reparto_id, ruolo)
     const [destinatari] = await db.query(`
-      SELECT DISTINCT user_id
+      SELECT user_id, reparto_id, ruolo
       FROM notifiche_destinatari
       WHERE categoria = ?
         AND (commessa_id IS NULL OR commessa_id = ?)
-        AND (reparto_id IS NULL OR reparto_id = ?)`,
-      [categoria, commessaId, repartoId]
-    );
-    const userIds = destinatari.map(d => d.user_id);
-    if (userIds.length === 0) return;
+        AND (reparto_id IS NULL OR reparto_id = ?)
+    `, [categoria, commessaId, repartoId]);
 
-    // 2. Preferenze utenti
+    if (destinatari.length === 0) return;
+
+    // 2. Prendi tutti gli utenti con reparto e ruolo associati
+    const [utenti] = await db.query(`
+      SELECT u.id, u.reparto_id, u.role_id, u.device_token, u.email, r.role_name
+      FROM users u
+      LEFT JOIN roles r ON u.role_id = r.id
+    `);
+
+    // 3. Filtra gli utenti che devono ricevere la notifica
+    const userIds = utenti
+      .filter(u =>
+        destinatari.some(d =>
+          (d.user_id && d.user_id === u.id) ||
+          (d.reparto_id && d.reparto_id === u.reparto_id) ||
+          (d.ruolo && d.ruolo === u.role_name)
+        )
+      )
+      .map(u => u.id);
+
+    const uniqueUserIds = [...new Set(userIds)];
+
+    if (uniqueUserIds.length === 0) return;
+
+    // 4. Prendi preferenze notifica per categoria
     const [preferenze] = await db.query(`
       SELECT user_id, via_push, via_email, solo_app
       FROM notifiche_preferenze
-      WHERE categoria = ? AND user_id IN (?)`,
-      [categoria, userIds]
-    );
+      WHERE categoria = ? AND user_id IN (?)
+    `, [categoria, uniqueUserIds]);
+
     const prefsMap = {};
     for (const pref of preferenze) {
       prefsMap[pref.user_id] = {
@@ -112,24 +133,24 @@ const inviaNotificaCategoria = async ({ categoria, titolo, messaggio, commessaId
       };
     }
 
-    // 3. Info utenti
-    const [utenti] = await db.query(`
+    // 5. Info utenti
+    const [utentiFinali] = await db.query(`
       SELECT id, device_token, email
       FROM users
-      WHERE id IN (?)`, [userIds]
-    );
+      WHERE id IN (?)
+    `, [uniqueUserIds]);
 
-    for (const u of utenti) {
+    // 6. Invio Notifiche
+    for (const u of utentiFinali) {
       const prefs = prefsMap[u.id] || { via_push: true, via_email: false, solo_app: false };
 
       // a. Salva sempre nel DB
       await db.query(`
         INSERT INTO notifications (user_id, titolo, message, category, is_read, created_at)
-        VALUES (?, ?, ?, ?, false, NOW())`,
-        [u.id, titolo, messaggio, categoria]
-      );
+        VALUES (?, ?, ?, ?, false, NOW())
+      `, [u.id, titolo, messaggio, categoria]);
 
-      // b. Push se attivo e ha token
+      // b. Push
       if (prefs.via_push && u.device_token) {
         try {
           await admin.messaging().send({
@@ -145,13 +166,11 @@ const inviaNotificaCategoria = async ({ categoria, titolo, messaggio, commessaId
         }
       }
 
-      // c. Email (opzionale)
+      // c. Email
       if (prefs.via_email && u.email) {
         console.log(`[Fake Email] → ${u.email}: ${titolo} - ${messaggio}`);
-        // In futuro puoi usare nodemailer
+        // TODO: nodemailer se vuoi inviare davvero
       }
-
-      // d. Se solo_app è true → già salvata nel DB
     }
 
   } catch (err) {

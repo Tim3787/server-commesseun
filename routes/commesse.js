@@ -424,16 +424,13 @@ router.post("/", async (req, res) => {
       stato_commessa,
     ]);
 
-    const userIds = [44, 26];
-   const messaggio = `È stata creata una nuova commessa: ${numero_commessa} | In consegna il: ${new Date(data_consegna).toLocaleDateString("it-IT")}`;
-    await inviaNotificheUtenti({
-     userIds,
-      titolo: "Nuova commessa",
-      messaggio,
-      categoria: "Commessa",
-      push: true  
-    });
-
+const messaggio = `È stata creata una nuova commessa: ${numero_commessa} | In consegna il: ${new Date(data_consegna).toLocaleDateString("it-IT")}`;
+await inviaNotificaCategoria({
+  categoria: "Commessa",
+  titolo: "Nuova commessa",
+  messaggio,
+  commessaId: result.insertId,
+});
     res.status(201).json({
       message: "Commessa creata con successo e stati avanzamento iniziali associati.",
       commessaId: result.insertId,

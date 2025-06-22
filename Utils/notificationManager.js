@@ -43,10 +43,7 @@ const inviaNotificheUtenti = async ({
   );
 
   if (preferiscePush && utente.device_token) {
-    console.log(`🚀 Invia push a utente ${utente.id}`);
-    console.log(`🔑 Titolo: ${titolo}`);
-    console.log(`📩 Messaggio: ${messaggio}`);
-    console.log(`📱 Token: ${utente.device_token}`);
+
 
     const msg = {
       token: utente.device_token,
@@ -59,8 +56,6 @@ const inviaNotificheUtenti = async ({
 
     try {
       await admin.messaging().send(msg);
-      console.log(`✅ Notifica push inviata con successo a utente ${utente.id}`);
-console.warn(`⚠️ Errore notifica push a utente ${utente.id}:`, err.message);
 
     } catch (err) {
       console.warn(`Errore notifica push a utente ${utente.id}:`, err.message);
@@ -174,11 +169,17 @@ const inviaNotificaCategoria = async ({
 
       if (prefs.via_push && u.device_token) {
         try {
-          await admin.messaging().send({
-            token: u.device_token,
-            notification: { title: titolo, body: messaggio },
-            data: { categoria },
-          });
+await admin.messaging().send({
+  token: u.device_token,
+  notification: {
+    title: titolo,
+    body: messaggio
+  },
+  data: {
+    categoria // ✅ solo eventuali extra qui
+  }
+});
+
           console.log(`📲 Push inviata a utente: ${u.id}`);
         } catch (err) {
           console.warn(`⚠️ Errore push utente ${u.id}:`, err.message);

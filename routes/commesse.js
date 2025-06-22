@@ -429,7 +429,7 @@ await inviaNotificaCategoria({
   categoria: "Commessa",
   titolo: "Nuova commessa",
   messaggio,
-  commessaId: result.insertId,
+  includiGlobali: true
 });
     res.status(201).json({
       message: "Commessa creata con successo e stati avanzamento iniziali associati.",

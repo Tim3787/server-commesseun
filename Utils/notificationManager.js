@@ -82,29 +82,43 @@ const inviaNotificheUtenti = async ({
  * @param {number|null} [options.commessaId] - Filtra per commessa (opzionale)
  * @param {number|null} [options.repartoId] - Filtra per reparto (opzionale)
  */
-const inviaNotificaCategoria = async ({ categoria, titolo, messaggio, commessaId = null, repartoId = null }) => {
+const inviaNotificaCategoria = async ({ 
+  categoria, 
+  titolo, 
+  messaggio, 
+  commessaId = null, 
+  repartoId = null, 
+  includiGlobali = false // 👈 nuovo flag per includere quelli senza reparto
+}) => {
   try {
-    // 1. Prendi tutti i destinatari (user_id, reparto_id, ruolo)
-    const [destinatari] = await db.query(`
+    // 1. Costruisci dinamicamente la query destinatari
+    let queryDestinatari = `
       SELECT user_id, reparto_id, ruolo
       FROM notifiche_destinatari
       WHERE categoria = ?
         AND (commessa_id IS NULL OR commessa_id = ?)
-        AND (reparto_id IS NULL OR reparto_id = ?)
-    `, [categoria, commessaId, repartoId]);
+    `;
+    const queryParams = [categoria, commessaId];
 
+    if (includiGlobali) {
+      queryDestinatari += ` AND (reparto_id IS NULL OR reparto_id = ?)`;
+    } else {
+      queryDestinatari += ` AND reparto_id = ?`;
+    }
+    queryParams.push(repartoId);
+
+    const [destinatari] = await db.query(queryDestinatari, queryParams);
     if (destinatari.length === 0) return;
 
-    // 2. Prendi tutti gli utenti con reparto e ruolo associati
+    // 2. Prendi utenti con reparto + ruolo
     const [utenti] = await db.query(`
-    SELECT u.id, ru.reparto_id, u.role_id, u.device_token, u.email, r.role_name
-FROM users u
-LEFT JOIN risorse ru ON ru.id = u.risorsa_id
-LEFT JOIN roles r ON u.role_id = r.id
-
+      SELECT u.id, ru.reparto_id, u.role_id, u.device_token, u.email, r.role_name
+      FROM users u
+      LEFT JOIN risorse ru ON ru.id = u.risorsa_id
+      LEFT JOIN roles r ON u.role_id = r.id
     `);
 
-    // 3. Filtra gli utenti che devono ricevere la notifica
+    // 3. Filtra
     const userIds = utenti
       .filter(u =>
         destinatari.some(d =>
@@ -116,10 +130,9 @@ LEFT JOIN roles r ON u.role_id = r.id
       .map(u => u.id);
 
     const uniqueUserIds = [...new Set(userIds)];
-
     if (uniqueUserIds.length === 0) return;
 
-    // 4. Prendi preferenze notifica per categoria
+    // 4. Preferenze
     const [preferenze] = await db.query(`
       SELECT user_id, via_push, via_email
       FROM notifiche_preferenze
@@ -141,38 +154,29 @@ LEFT JOIN roles r ON u.role_id = r.id
       WHERE id IN (?)
     `, [uniqueUserIds]);
 
-    // 6. Invio Notifiche
+    // 6. Invio
     for (const u of utentiFinali) {
-      const prefs = prefsMap[u.id] || { via_push: true, via_email: false};
+      const prefs = prefsMap[u.id] || { via_push: true, via_email: false };
 
-      // a. Salva sempre nel DB
       await db.query(`
         INSERT INTO notifications (user_id, titolo, message, category, is_read, created_at)
         VALUES (?, ?, ?, ?, false, NOW())
       `, [u.id, titolo, messaggio, categoria]);
 
-      // b. Push
       if (prefs.via_push && u.device_token) {
         try {
-   console.log("Invio push a:", u.id, "Titolo:", titolo, "Messaggio:", messaggio);
-
-await admin.messaging().send({
-  token: u.device_token,
-  notification: {
-    title: titolo || "(titolo mancante)",
-    body: messaggio || "(messaggio mancante)",
-  },
-  data: { categoria },
-});
+          await admin.messaging().send({
+            token: u.device_token,
+            notification: { title: titolo, body: messaggio },
+            data: { categoria },
+          });
         } catch (err) {
           console.warn(`Errore push utente ${u.id}:`, err.message);
         }
       }
 
-      // c. Email
       if (prefs.via_email && u.email) {
         console.log(`[Fake Email] → ${u.email}: ${titolo} - ${messaggio}`);
-        // TODO: nodemailer se vuoi inviare davvero
       }
     }
 
@@ -180,6 +184,7 @@ await admin.messaging().send({
     console.error("Errore in inviaNotificaCategoria:", err);
   }
 };
+
 
 
 

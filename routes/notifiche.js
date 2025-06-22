@@ -250,6 +250,7 @@ await inviaNotificaCategoria({
   messaggio: message,
   commessaId: activity[0].commessa_id,
   repartoId: repartoId,
+  includiGlobali: false,
 });
 
     res.status(200).send("Stato dell'attività aggiornato con successo.");

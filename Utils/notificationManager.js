@@ -44,6 +44,10 @@ const inviaNotificheUtenti = async ({
 
       // Se vuole anche push ed è disponibile il device token
       if (preferiscePush && utente.device_token) {
+          console.log(`🚀 Invia push a utente ${utente.id}`);
+  console.log(`🔑 Titolo: ${titolo}`);
+  console.log(`📩 Messaggio: ${messaggio}`);
+  console.log(`📱 Token: ${utente.device_token}`);
         const msg = {
           token: utente.device_token,
           data: {

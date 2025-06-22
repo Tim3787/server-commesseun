@@ -97,9 +97,11 @@ const inviaNotificaCategoria = async ({ categoria, titolo, messaggio, commessaId
 
     // 2. Prendi tutti gli utenti con reparto e ruolo associati
     const [utenti] = await db.query(`
-      SELECT u.id, u.reparto_id, u.role_id, u.device_token, u.email, r.role_name
-      FROM users u
-      LEFT JOIN roles r ON u.role_id = r.id
+      SELECT u.id, ru.reparto_id, u.role_id, u.device_token, u.email, r.role_name
+FROM users u
+LEFT JOIN risorse ru ON ru.user_id = u.id
+LEFT JOIN roles r ON u.role_id = r.id
+
     `);
 
     // 3. Filtra gli utenti che devono ricevere la notifica

@@ -8,12 +8,17 @@ const db = require("../config/db");
 router.get("/", async (req, res) => {
   try {
     const [rows] = await db.query(`
-      SELECT nd.id, nd.categoria, nd.id_utente, r.nome
-      FROM notifiche_destinatari nd
-      JOIN users u ON nd.id_utente = u.id
-      JOIN risorse r ON u.risorsa_id = r.id
-    `);
-    res.json(rows);
+  SELECT 
+    nd.id, 
+    nd.categoria, 
+    nd.user_id, 
+    u.username AS nome_utente,
+    r.nome AS nome_risorsa
+  FROM notifiche_destinatari nd
+  JOIN users u ON nd.user_id = u.id
+  JOIN risorse r ON u.risorsa_id = r.id
+`);
+res.json(rows);
   } catch (err) {
     console.error("Errore nel recupero destinatari:", err);
     res.status(500).send("Errore nel recupero destinatari.");

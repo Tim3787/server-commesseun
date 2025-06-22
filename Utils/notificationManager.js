@@ -158,7 +158,8 @@ const inviaNotificaCategoria = async ({
 
     // 6. Invia notifiche
     for (const u of utentiFinali) {
-      const prefs = prefsMap[u.id] || { via_push: true, via_email: false };
+      const prefs = prefsMap[u.id] ?? { via_push: true, via_email: false };
+
 
       await db.query(`
         INSERT INTO notifications (user_id, titolo, message, category, is_read, created_at)

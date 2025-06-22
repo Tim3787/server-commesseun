@@ -154,14 +154,16 @@ LEFT JOIN roles r ON u.role_id = r.id
       // b. Push
       if (prefs.via_push && u.device_token) {
         try {
-          await admin.messaging().send({
-            token: u.device_token,
-            notification: {
-              title: titolo,
-              body: messaggio,
-            },
-            data: { categoria },
-          });
+   console.log("Invio push a:", u.id, "Titolo:", titolo, "Messaggio:", messaggio);
+
+await admin.messaging().send({
+  token: u.device_token,
+  notification: {
+    title: titolo || "(titolo mancante)",
+    body: messaggio || "(messaggio mancante)",
+  },
+  data: { categoria },
+});
         } catch (err) {
           console.warn(`Errore push utente ${u.id}:`, err.message);
         }

@@ -1,7 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const db = require("../config/db");
-const { inviaNotificheUtenti } = require("../Utils/notificationManager");
+const { inviaNotificheUtenti, inviaNotificaCategoria } = require("../Utils/notificationManager");
 
 const formatMySQLDate = (isoDate) => {
   if (!isoDate || isNaN(new Date(isoDate))) return null; // Verifica se la data è valida

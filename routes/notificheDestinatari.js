@@ -8,9 +8,10 @@ const db = require("../config/db");
 router.get("/", async (req, res) => {
   try {
     const [rows] = await db.query(`
-      SELECT nd.id, nd.categoria, nd.id_utente, u.nome
+      SELECT nd.id, nd.categoria, nd.id_utente, r.nome
       FROM notifiche_destinatari nd
       JOIN users u ON nd.id_utente = u.id
+      JOIN risorse r ON u.risorsa_id = r.id
     `);
     res.json(rows);
   } catch (err) {

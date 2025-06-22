@@ -66,43 +66,20 @@ router.post("/", getUserIdFromToken, async (req, res) => {
 });
 
 
-// PUT - Aggiorna una preferenza
-router.put("/", async (req, res) => {
-  const { user_id, categoria, push, email } = req.body;
-
-  if (!user_id || !categoria) {
-    return res.status(400).send("user_id e categoria sono obbligatori.");
-  }
-
-  try {
-    const [result] = await db.query(
-      "UPDATE notifiche_preferenze SET push = ?, email = ? WHERE user_id = ? AND categoria = ?",
-      [!!push, !!email, user_id, categoria]
-    );
-
-    if (result.affectedRows === 0) {
-      return res.status(404).send("Preferenza non trovata.");
-    }
-
-    res.send("Preferenza aggiornata.");
-  } catch (err) {
-    console.error("Errore durante l'aggiornamento della preferenza:", err);
-    res.status(500).send("Errore durante l'aggiornamento della preferenza.");
-  }
-});
 
 // DELETE - Rimuovi una preferenza
-router.delete("/", async (req, res) => {
-  const { user_id, categoria } = req.body;
+router.delete("/:categoria", getUserIdFromToken, async (req, res) => {
+  const userId = req.userId;
+  const { categoria } = req.params;
 
-  if (!user_id || !categoria) {
-    return res.status(400).send("user_id e categoria sono obbligatori.");
+  if (!categoria) {
+    return res.status(400).send("Categoria obbligatoria.");
   }
 
   try {
     const [result] = await db.query(
       "DELETE FROM notifiche_preferenze WHERE user_id = ? AND categoria = ?",
-      [user_id, categoria]
+      [userId, categoria]
     );
 
     if (result.affectedRows === 0) {
@@ -117,3 +94,5 @@ router.delete("/", async (req, res) => {
 });
 
 module.exports = router;
+
+

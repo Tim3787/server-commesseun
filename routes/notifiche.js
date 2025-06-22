@@ -247,6 +247,7 @@ WHERE ac.id = ?
 const statoStr = stato === 1 ? "Iniziata" : stato === 2 ? "Completata" : `Aggiornata (${stato})`;
 const message = `${nomeRisorsa} ha aggiornato lo stato dell'attività ${tipoAttivita} della commessa ${numeroCommessa} a: ${statoStr}.`;
 
+    // DEBUG
 if (false) {
     await inviaNotificheUtenti({
       userIds: [managerId],

@@ -48,6 +48,15 @@ const inviaNotificheUtenti = async ({
   console.log(`🔑 Titolo: ${titolo}`);
   console.log(`📩 Messaggio: ${messaggio}`);
   console.log(`📱 Token: ${utente.device_token}`);
+  console.log("👉 Provo a inviare a Firebase con:", {
+  token: utente.device_token,
+  data: {
+    title: titolo,
+    body: messaggio,
+    categoria: categoria,
+  }
+});
+
         const msg = {
           token: utente.device_token,
           data: {

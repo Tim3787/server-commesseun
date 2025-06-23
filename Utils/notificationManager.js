@@ -1,6 +1,28 @@
 const admin = require("firebase-admin");
 const db = require("../config/db");
 
+const inizializzaPreferenzeCategoria = async (categoria) => {
+  // Controlla se la categoria è già presente
+  const [esistenti] = await db.query(`
+    SELECT DISTINCT categoria FROM notifiche_preferenze WHERE categoria = ?
+  `, [categoria]);
+
+  if (esistenti.length > 0) return; // già inizializzata
+
+  // Ottieni tutti gli utenti
+  const [utenti] = await db.query(`SELECT id FROM users`);
+const preferenze = utenti.map(u => [u.id, categoria, true, false]);
+
+await db.query(`
+  INSERT INTO notifiche_preferenze (user_id, categoria, via_push, via_email)
+  VALUES ?
+`, [preferenze]);
+
+
+  console.log(`⚙️ Preferenze notifica inizializzate per categoria: ${categoria}`);
+};
+
+
 /**
  * Invia notifiche a uno o più utenti (salva nel DB + push se previsto dalle preferenze)
  * @param {Object} options
@@ -16,6 +38,7 @@ const inviaNotificheUtenti = async ({
   categoria = "generale"
 }) => {
   if (!userIds || userIds.length === 0) return;
+await inizializzaPreferenzeCategoria(categoria);
 
   try {
     // Prendi le preferenze di notifica per gli utenti e la categoria
@@ -82,6 +105,7 @@ const inviaNotificaCategoria = async ({
 }) => {
   try {
     console.log("➡️ inviaNotificaCategoria → categoria:", categoria, " | repartoId:", repartoId, " | includiGlobali:", includiGlobali);
+await inizializzaPreferenzeCategoria(categoria);
 
     // 1. Carica i destinatari
     const [destinatari] = await db.query(`
@@ -172,12 +196,10 @@ const inviaNotificaCategoria = async ({
         try {
 await admin.messaging().send({
   token: u.device_token,
-  notification: {
-    title: titolo,
-    body: messaggio
-  },
   data: {
-    categoria // ✅ solo eventuali extra qui
+    title: titolo,
+    body: messaggio,
+    categoria
   }
 });
 

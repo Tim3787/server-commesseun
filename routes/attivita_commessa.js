@@ -199,7 +199,7 @@ router.post("/", getUserIdFromToken, async (req, res) => {
       userIds: [userId],
       titolo: "Ti è stata assegnata un'attività:",
       messaggio: message,
-      categoria: "Attività",
+      categoria: "Attività creata",
       push: true  
     });
     res.status(201).send("Attività assegnata con successo!");
@@ -267,7 +267,7 @@ router.put("/:id", getUserIdFromToken, async (req, res) => {
       userIds: [userId],
       titolo: "E' stata modificata un'attività:",
       messaggio: message,
-      categoria: "Attività",
+      categoria: "Attività modificata",
       push: false  
     });
 
@@ -324,7 +324,7 @@ router.delete("/:id", getUserIdFromToken, async (req, res) => {
       userIds: [userId],
       titolo: "Un'attività è stata eliminata:",
       messaggio: message,
-      categoria: "Attività", 
+      categoria: "Attività eliminata", 
      push: true  
     });
 

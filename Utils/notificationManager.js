@@ -22,6 +22,31 @@ await db.query(`
   console.log(`⚙️ Preferenze notifica inizializzate per categoria: ${categoria}`);
 };
 
+const sincronizzaPreferenzePerUtente = async (userId) => {
+  const [categorieEsistenti] = await db.query(`
+    SELECT DISTINCT categoria FROM notifiche_preferenze
+  `);
+
+  const [preferenzeUtente] = await db.query(`
+    SELECT categoria FROM notifiche_preferenze WHERE user_id = ?
+  `, [userId]);
+
+  const categorieUtente = preferenzeUtente.map(p => p.categoria);
+  const categorieMancanti = categorieEsistenti
+    .map(c => c.categoria)
+    .filter(cat => !categorieUtente.includes(cat));
+
+  if (categorieMancanti.length > 0) {
+    const nuovePreferenze = categorieMancanti.map(cat => [userId, cat, true, false, true]);
+    await db.query(`
+      INSERT INTO notifiche_preferenze (user_id, categoria, via_push, via_email, visibile)
+      VALUES ?
+    `, [nuovePreferenze]);
+
+    console.log(`✅ Preferenze notifica aggiunte per utente ${userId}`);
+  }
+};
+
 
 /**
  * Invia notifiche a uno o più utenti (salva nel DB + push se previsto dalle preferenze)

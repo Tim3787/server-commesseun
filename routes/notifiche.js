@@ -248,8 +248,11 @@ await inviaNotificaCategoria({
   categoria: "Stato attività",
   titolo: "Aggiornamento attività",
   messaggio: message,
+    // QUALE COMMESSA
   commessaId: activity[0].commessa_id,
+  // CHI HA COMPLETATO L'ATTIVITA'
   repartoId: repartoId,
+  // includi globali true manda la notifica in base alla tabella, false guarda i destinatari del repartoId
   includiGlobali: false,
 });
 

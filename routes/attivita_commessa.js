@@ -187,7 +187,7 @@ router.post("/", getUserIdFromToken, async (req, res) => {
 
     // Crea il messaggio
 
-     const message =`- Commessa: ${numeroCommessa}
+     const message =`Nuova attività: Commessa: ${numeroCommessa}
       - Tipo attività: ${tipoAttivita}
       - Data inizio: ${new Date(data_inizio).toLocaleDateString("it-IT")}
       - Durata: ${durata} giorni

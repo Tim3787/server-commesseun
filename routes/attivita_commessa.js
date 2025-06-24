@@ -187,7 +187,7 @@ router.post("/", getUserIdFromToken, async (req, res) => {
 
     // Crea il messaggio
 
-     const message =`Nuova attività: Commessa: ${numeroCommessa}
+     const message =`Nuova attività, Commessa: ${numeroCommessa}
       - Tipo attività: ${tipoAttivita}
       - Data inizio: ${new Date(data_inizio).toLocaleDateString("it-IT")}
       - Durata: ${durata} giorni
@@ -256,7 +256,7 @@ router.put("/:id", getUserIdFromToken, async (req, res) => {
     await db.query(sql, [commessa_id, risorsa_id, attivita_id, formattedDataInizio, durata, descrizione, stato, JSON.stringify(includedWeekends || []), id]);
 
  
-     const message =`- Commessa: ${numeroCommessa}
+     const message =`Attività modificata, Commessa: ${numeroCommessa}
       - Tipo attività: ${tipoAttivita}
       - Data inizio: ${new Date(data_inizio).toLocaleDateString("it-IT")}
       - Durata: ${durata} giorni
@@ -317,7 +317,7 @@ router.delete("/:id", getUserIdFromToken, async (req, res) => {
 
     // Crea una notifica solo se esiste un utente associato
   
-    const message =`- Commessa: ${numeroCommessa}
+    const message =`Attività eliminata, Commessa: ${numeroCommessa}
       - Tipo attività: ${tipoAttivita}`;
 
     await inviaNotificheUtenti({

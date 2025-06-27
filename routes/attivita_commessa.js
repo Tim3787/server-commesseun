@@ -271,7 +271,7 @@ router.put("/:id", getUserIdFromToken, async (req, res) => {
       push: false  
     });
 
-    res.send("Attività aggiornata con successo e notifica inviata!");
+    res.json(attivitaAggiornata);
   } catch (err) {
     console.error("Errore durante la modifica dell'attività:", err);
     res.status(500).send("Errore durante la modifica dell'attività.");

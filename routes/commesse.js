@@ -326,20 +326,21 @@ router.put("/:commessaId/reparti/:repartoId/stato", async (req, res) => {
 
     // 4. Aggiorna date e isActive
     statiAvanzamento = statiAvanzamento.map((stato) => {
-      if (stato.reparto_id === repartoIdInt) {
-        if (stato.stato_id === statoIdInt) {
-          return {
-            ...stato,
-            isActive: true,
-            data_inizio: data_inizio ? new Date(data_inizio) : stato.data_inizio,
-            data_fine: data_fine ? new Date(data_fine) : stato.data_fine
-          };
-        } else {
-          return { ...stato, isActive: false };
-        }
-      }
-      return stato;
-    });
+  if (stato.reparto_id === repartoIdInt) {
+    if (stato.stato_id === statoIdInt) {
+      return {
+        ...stato,
+        isActive: true,
+        data_inizio: data_inizio != null ? new Date(data_inizio) : null,
+        data_fine: data_fine != null ? new Date(data_fine) : null
+      };
+    } else {
+      return { ...stato, isActive: false };
+    }
+  }
+  return stato;
+});
+
 
     // 5. Salva
     await db.query("UPDATE commesse SET stati_avanzamento = ? WHERE id = ?", [

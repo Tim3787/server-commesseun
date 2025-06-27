@@ -271,7 +271,17 @@ router.put("/:id", getUserIdFromToken, async (req, res) => {
       push: false  
     });
 
-    res.json(attivitaAggiornata);
+    res.json({
+  id: parseInt(id, 10),
+  commessa_id,
+  risorsa_id,
+  attivita_id,
+  data_inizio: formattedDataInizio,
+  durata,
+  descrizione,
+  stato,
+  includedWeekends
+}); // ✅ restituisce i dati al frontend
   } catch (err) {
     console.error("Errore durante la modifica dell'attività:", err);
     res.status(500).send("Errore durante la modifica dell'attività.");

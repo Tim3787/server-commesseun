@@ -274,26 +274,29 @@ router.put("/:id", getUserIdFromToken, async (req, res) => {
    // Recupera l'attività aggiornata con join per reparto e risorsa
 const [attivitaAggiornata] = await db.query(`
   SELECT 
-  a.id,
-  a.commessa_id,
-  a.risorsa_id,
-  ri.nome AS nome_risorsa,
-  a.attivita_id,
-  at.nome_attivita,
-  a.data_inizio,
-  a.durata,
-  a.descrizione,
-  a.stato,
-  a.included_weekends,
-  r.id AS reparto_id,
-  r.nome AS nome_reparto
-FROM attivita_commessa a
-JOIN attivita at ON at.id = a.attivita_id
-JOIN risorse ri ON ri.id = a.risorsa_id
-JOIN reparti r ON r.id = ri.reparto_id
-WHERE a.id = ?
+    a.id,
+    a.commessa_id,
+    c.numero_commessa,
+    a.risorsa_id,
+    ri.nome AS nome_risorsa,
+    a.attivita_id,
+    at.nome_attivita,
+    a.data_inizio,
+    a.durata,
+    a.descrizione,
+    a.stato,
+    a.included_weekends,
+    r.id AS reparto_id,
+    r.nome AS nome_reparto
+  FROM attivita_commessa a
+  JOIN commesse c ON c.id = a.commessa_id
+  JOIN attivita at ON at.id = a.attivita_id
+  JOIN risorse ri ON ri.id = a.risorsa_id
+  JOIN reparti r ON r.id = ri.reparto_id
+  WHERE a.id = ?
 `, [id]);
 
+res.json(attivitaAggiornata[0]);
 // Invia l’attività aggiornata al frontend
 res.json(attivitaAggiornata[0]);
 

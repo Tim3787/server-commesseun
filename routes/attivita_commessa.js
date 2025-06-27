@@ -271,17 +271,33 @@ router.put("/:id", getUserIdFromToken, async (req, res) => {
       push: false  
     });
 
-    res.json({
-  id: parseInt(id, 10),
-  commessa_id,
-  risorsa_id,
-  attivita_id,
-  data_inizio: formattedDataInizio,
-  durata,
-  descrizione,
-  stato,
-  includedWeekends
-}); // ✅ restituisce i dati al frontend
+   // Recupera l'attività aggiornata con join per reparto e risorsa
+const [attivitaAggiornata] = await db.query(`
+  SELECT 
+    a.id,
+    a.commessa_id,
+    a.risorsa_id,
+    u.nome AS nome_risorsa,
+    a.attivita_id,
+    at.nome_attivita,
+    a.data_inizio,
+    a.durata,
+    a.descrizione,
+    a.stato,
+    a.included_weekends,
+    r.id AS reparto_id,
+    r.nome AS nome_reparto
+  FROM attivita_commessa a
+  JOIN attivita at ON at.id = a.attivita_id
+  JOIN risorse ri ON ri.id = a.risorsa_id
+  JOIN reparti r ON r.id = ri.reparto_id
+  JOIN users u ON u.risorsa_id = ri.id
+  WHERE a.id = ?
+`, [id]);
+
+// Invia l’attività aggiornata al frontend
+res.json(attivitaAggiornata[0]);
+
   } catch (err) {
     console.error("Errore durante la modifica dell'attività:", err);
     res.status(500).send("Errore durante la modifica dell'attività.");

@@ -297,8 +297,6 @@ const [attivitaAggiornata] = await db.query(`
 `, [id]);
 
 res.json(attivitaAggiornata[0]);
-// Invia l’attività aggiornata al frontend
-res.json(attivitaAggiornata[0]);
 
   } catch (err) {
     console.error("Errore durante la modifica dell'attività:", err);

@@ -202,7 +202,33 @@ router.post("/", getUserIdFromToken, async (req, res) => {
       categoria: "Attività creata",
       push: true  
     });
-    res.status(201).send("Attività assegnata con successo!");
+    // Recupera l’attività appena inserita, completa di nome_risorsa, nome_attivita e nome_reparto
+const [attivitaCreata] = await db.query(`
+  SELECT 
+    a.id,
+    a.commessa_id,
+    c.numero_commessa,
+    a.risorsa_id,
+    ri.nome AS nome_risorsa,
+    a.attivita_id,
+    at.nome_attivita,
+    a.data_inizio,
+    a.durata,
+    a.descrizione,
+    a.stato,
+    a.included_weekends,
+    r.id AS reparto_id,
+    r.nome AS nome_reparto
+  FROM attivita_commessa a
+  JOIN commesse c ON c.id = a.commessa_id
+  JOIN attivita at ON at.id = a.attivita_id
+  JOIN risorse ri ON ri.id = a.risorsa_id
+  JOIN reparti r ON r.id = ri.reparto_id
+  WHERE a.id = ?
+`, [result.insertId]);
+
+res.status(201).json(attivitaCreata[0]);
+
   } catch (error) {
     console.error("Errore durante l'assegnazione dell'attività:", error);
     res.status(500).send("Errore durante l'assegnazione dell'attività.");

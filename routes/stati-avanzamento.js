@@ -45,7 +45,7 @@ router.get("/", async (req, res) => {
   }
 });
 
-
+/**
 // Aggiungi uno stato di avanzamento a un reparto
 router.post("/", async (req, res) => {
   const { nome_stato, reparto_id } = req.body;
@@ -137,8 +137,112 @@ router.post("/", async (req, res) => {
     res.status(500).send("Errore durante l'aggiunta dello stato di avanzamento");
   }
 });
+ **/
 
+// Aggiungi uno stato di avanzamento a un reparto
+router.post("/", async (req, res) => {
+  const { nome_stato, reparto_id } = req.body;
+  if (!nome_stato || !reparto_id) {
+    return res.status(400).send("Nome dello stato e reparto sono obbligatori.");
+  }
 
+  try {
+    // 1) Esistenza già presente (consigliato indice UNIQUE su (reparto_id, nome_stato))
+    const [existingState] = await db.query(
+      "SELECT id, nome_stato, reparto_id, ordine FROM stati_avanzamento WHERE nome_stato = ? AND reparto_id = ?",
+      [nome_stato, reparto_id]
+    );
+    if (existingState.length > 0) {
+      // 409 più semantico, ma tieni pure 400 se preferisci
+      return res.status(409).send("Stato di avanzamento già esistente per questo reparto.");
+    }
+
+    // 2) Calcolo ordine
+    const [ordineResult] = await db.query(
+      `SELECT COALESCE(MAX(ordine), 0) + 1 AS nuovo_ordine
+       FROM stati_avanzamento
+       WHERE reparto_id = ?`,
+      [reparto_id]
+    );
+    const nuovoOrdine = ordineResult[0]?.nuovo_ordine ?? 1;
+
+    // 3) Insert stato
+    const [insertResult] = await db.query(
+      `INSERT INTO stati_avanzamento (nome_stato, reparto_id, ordine)
+       VALUES (?, ?, ?)`,
+      [nome_stato, reparto_id, nuovoOrdine]
+    );
+    const stato_id = insertResult.insertId;
+
+    // 4) Risposta IMMEDIATA al client (evita timeout lato Axios)
+    const created = { id: stato_id, nome_stato, reparto_id: Number(reparto_id), ordine: nuovoOrdine };
+    res.status(201).json(created);
+
+    // 5) Lavoro pesante DOPO la risposta (no await): aggiorna commesse e allinea
+    //    Se preferisci comunque attendere tutto prima di chiudere la route, togli il blocco auto-invocato e metti await.
+    (async () => {
+      try {
+        // Prendi solo le commesse con JSON presente (come facevi) — opzionale: limita a commesse attive
+        const [rows] = await db.query(
+          `SELECT id, stati_avanzamento
+           FROM commesse
+           WHERE stati_avanzamento IS NOT NULL`
+        );
+
+        const updates = [];
+        for (const row of rows) {
+          let sa = row.stati_avanzamento;
+          try {
+            if (typeof sa === "string") sa = JSON.parse(sa);
+            if (!Array.isArray(sa)) sa = [];
+          } catch (e) {
+            console.error("JSON stati_avanzamento non valido per commessa", row.id, e);
+            sa = Array.isArray(sa) ? sa : [];
+          }
+
+          const giàPresente = sa.some(
+            (st) => Number(st.reparto_id) === Number(reparto_id) && st.nome_stato === nome_stato
+          );
+          if (giàPresente) continue;
+
+          // aggiunta nuovo stato
+          sa.push({
+            stato_id,
+            nome_stato,
+            reparto_id: Number(reparto_id),
+            data_inizio: null,
+            data_fine: null,
+            isActive: false,
+            ordine: nuovoOrdine,
+          });
+
+          updates.push(
+            db.query(
+              "UPDATE commesse SET stati_avanzamento = ? WHERE id = ?",
+              [JSON.stringify(sa), row.id]
+            )
+          );
+        }
+
+        if (updates.length > 0) {
+          // batch update
+          await Promise.all(updates);
+        }
+
+        // Chiamale UNA SOLA VOLTA, non nel for
+        await verificaStatiCommesse();
+        await allineaStatiCommesse();
+
+      } catch (bgErr) {
+        console.error("Errore durante l'allineamento post-creazione stato:", bgErr);
+      }
+    })();
+
+  } catch (err) {
+    console.error("Errore durante l'aggiunta dello stato di avanzamento:", err);
+    return res.status(500).send("Errore durante l'aggiunta dello stato di avanzamento");
+  }
+});
 
 
 

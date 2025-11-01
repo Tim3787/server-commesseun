@@ -9,7 +9,6 @@ router.get("/", async (req, res) => {
     FROM risorse r
     LEFT JOIN reparti rep ON r.reparto_id = rep.id
         WHERE r.is_active = 1
-    ORDER BY r.nome
   `;
   try {
     const [results] = await db.query(sql);

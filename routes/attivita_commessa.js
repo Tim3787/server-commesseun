@@ -387,5 +387,72 @@ router.delete("/:id", getUserIdFromToken, async (req, res) => {
   }
 });
 
+// ✅ Ottieni le attività aperte dell'utente loggato
+router.get("/me/aperte", getUserIdFromToken, async (req, res) => {
+  try {
+    // 1️⃣ Trova la risorsa collegata all'utente
+    const [user] = await db.query(
+      "SELECT risorsa_id FROM users WHERE id = ?",
+      [req.userId]
+    );
+
+    if (!user.length) {
+      return res.status(404).send("Nessuna risorsa associata all'utente.");
+    }
+
+    const risorsaId = user[0].risorsa_id;
+
+    // 2️⃣ Recupera le attività aperte
+    const [rows] = await db.query(
+      `SELECT ac.*, c.numero_commessa, a.nome_attivita
+       FROM attivita_commessa ac
+       JOIN commesse c ON ac.commessa_id = c.id
+       JOIN attivita a ON ac.attivita_id = a.id
+       WHERE ac.risorsa_id = ? AND ac.stato != 2
+       ORDER BY ac.data_inizio DESC`,
+      [risorsaId]
+    );
+
+    res.json(rows);
+  } catch (err) {
+    console.error("Errore attività aperte:", err);
+    res.status(500).send("Errore server.");
+  }
+});
+
+// ✅ Ottieni le attività dell’utente con note aperte
+router.get("/me/note-aperte", getUserIdFromToken, async (req, res) => {
+  try {
+    const [user] = await db.query(
+      "SELECT risorsa_id FROM users WHERE id = ?",
+      [req.userId]
+    );
+
+    if (!user.length) {
+      return res.status(404).send("Nessuna risorsa associata all'utente.");
+    }
+
+    const risorsaId = user[0].risorsa_id;
+
+    const [rows] = await db.query(
+      `SELECT ac.*, c.numero_commessa, a.nome_attivita
+       FROM attivita_commessa ac
+       JOIN commesse c ON ac.commessa_id = c.id
+       JOIN attivita a ON ac.attivita_id = a.id
+       WHERE ac.risorsa_id = ?
+         AND ac.stato != 2
+         AND ac.note IS NOT NULL
+         AND ac.note NOT LIKE '[CHIUSA]%'
+       ORDER BY ac.data_inizio DESC`,
+      [risorsaId]
+    );
+
+    res.json(rows);
+  } catch (err) {
+    console.error("Errore note aperte:", err);
+    res.status(500).send("Errore server.");
+  }
+});
+
 
 module.exports = router;

@@ -480,7 +480,7 @@ router.get("/reparto/:repartoId/dashboard", async (req, res) => {
       JOIN commesse c ON ac.commessa_id = c.id
       JOIN attivita ad ON ac.attivita_id = ad.id
       WHERE ac.reparto_id = ?
-        AND ac.stato != 2
+          AND ac.stato = 1
       ORDER BY ac.data_inizio ASC
     `, [repartoId]);
 

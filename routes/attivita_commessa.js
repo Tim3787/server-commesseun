@@ -455,7 +455,59 @@ router.get("/me/note-aperte", getUserIdFromToken, async (req, res) => {
     res.status(500).send("Errore server.");
   }
 });
+router.get("/reparto/:repartoId/dashboard", async (req, res) => {
+  const { repartoId } = req.params;
 
+  try {
+    const [[reparto]] = await db.query(
+      `SELECT id, nome_reparto FROM reparti WHERE id = ?`,
+      [repartoId]
+    );
+
+    if (!reparto) {
+      return res.status(404).json({ message: "Reparto non trovato" });
+    }
+
+    const [openActivities] = await db.query(`
+      SELECT 
+        ac.id, ac.commessa_id, c.numero_commessa, ac.attivita_id,
+        ad.nome_attivita, ac.data_inizio, ac.durata, ac.descrizione,
+        ac.stato, ac.note
+      FROM attivita_commessa ac
+      JOIN commesse c ON ac.commessa_id = c.id
+      JOIN attivita ad ON ac.attivita_id = ad.id
+      WHERE ac.reparto_id = ? AND ac.stato != 2
+      ORDER BY ac.data_inizio ASC
+    `, [repartoId]);
+
+    const [openNotes] = await db.query(`
+      SELECT 
+        ac.id, ac.commessa_id, c.numero_commessa, ac.attivita_id,
+        ad.nome_attivita, ac.data_inizio, ac.durata, ac.descrizione,
+        ac.stato, ac.note
+      FROM attivita_commessa ac
+      JOIN commesse c ON ac.commessa_id = c.id
+      JOIN attivita ad ON ac.attivita_id = ad.id
+      WHERE ac.reparto_id = ? 
+        AND ac.note IS NOT NULL
+        AND ac.note NOT LIKE '[CHIUSA]%'
+      ORDER BY ac.data_inizio ASC
+    `, [repartoId]);
+
+    res.json({
+      reparto_id: reparto.id,
+      reparto_nome: reparto.nome_reparto,
+      openActivitiesCount: openActivities.length,
+      openNotesCount: openNotes.length,
+      openActivities,
+      openNotes
+    });
+
+  } catch (err) {
+    console.error("Errore dashboard reparto:", err);
+    res.status(500).send("Errore server.");
+  }
+});
 
 
 module.exports = router;

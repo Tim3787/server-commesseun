@@ -460,8 +460,9 @@ router.get("/reparto/:repartoId/dashboard", async (req, res) => {
   const { repartoId } = req.params;
 
   try {
+    // ✅ Prendi info reparto
     const [[reparto]] = await db.query(
-      `SELECT id, nome_reparto FROM reparti WHERE id = ?`,
+      `SELECT id, nome FROM reparti WHERE id = ?`,
       [repartoId]
     );
 
@@ -469,6 +470,7 @@ router.get("/reparto/:repartoId/dashboard", async (req, res) => {
       return res.status(404).json({ message: "Reparto non trovato" });
     }
 
+    // ✅ Attività aperte del reparto
     const [openActivities] = await db.query(`
       SELECT 
         ac.id, ac.commessa_id, c.numero_commessa, ac.attivita_id,
@@ -477,11 +479,12 @@ router.get("/reparto/:repartoId/dashboard", async (req, res) => {
       FROM attivita_commessa ac
       JOIN commesse c ON ac.commessa_id = c.id
       JOIN attivita ad ON ac.attivita_id = ad.id
-      JOIN risorse r ON r.id = ac.risorsa_id         -- ✅ collega alla risorsa
-      WHERE r.reparto_id = ? AND ac.stato != 2        -- ✅ reparto corretto
+      WHERE ac.reparto_id = ?
+        AND ac.stato != 2
       ORDER BY ac.data_inizio ASC
     `, [repartoId]);
 
+    // ✅ Note aperte del reparto
     const [openNotes] = await db.query(`
       SELECT 
         ac.id, ac.commessa_id, c.numero_commessa, ac.attivita_id,
@@ -490,8 +493,7 @@ router.get("/reparto/:repartoId/dashboard", async (req, res) => {
       FROM attivita_commessa ac
       JOIN commesse c ON ac.commessa_id = c.id
       JOIN attivita ad ON ac.attivita_id = ad.id
-      JOIN risorse r ON r.id = ac.risorsa_id         -- ✅ collega alla risorsa
-      WHERE r.reparto_id = ?
+      WHERE ac.reparto_id = ?
         AND ac.note IS NOT NULL
         AND ac.note NOT LIKE '[CHIUSA]%'
       ORDER BY ac.data_inizio ASC
@@ -499,7 +501,7 @@ router.get("/reparto/:repartoId/dashboard", async (req, res) => {
 
     res.json({
       reparto_id: reparto.id,
-      reparto_nome: reparto.nome_reparto,
+      reparto_nome: reparto.nome,   // ✅ campo corretto
       openActivitiesCount: openActivities.length,
       openNotesCount: openNotes.length,
       openActivities,

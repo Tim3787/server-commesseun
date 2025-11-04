@@ -455,6 +455,7 @@ router.get("/me/note-aperte", getUserIdFromToken, async (req, res) => {
     res.status(500).send("Errore server.");
   }
 });
+
 router.get("/reparto/:repartoId/dashboard", async (req, res) => {
   const { repartoId } = req.params;
 
@@ -476,7 +477,8 @@ router.get("/reparto/:repartoId/dashboard", async (req, res) => {
       FROM attivita_commessa ac
       JOIN commesse c ON ac.commessa_id = c.id
       JOIN attivita ad ON ac.attivita_id = ad.id
-      WHERE ac.reparto_id = ? AND ac.stato != 2
+      JOIN risorse r ON r.id = ac.risorsa_id         -- ✅ collega alla risorsa
+      WHERE r.reparto_id = ? AND ac.stato != 2        -- ✅ reparto corretto
       ORDER BY ac.data_inizio ASC
     `, [repartoId]);
 
@@ -488,7 +490,8 @@ router.get("/reparto/:repartoId/dashboard", async (req, res) => {
       FROM attivita_commessa ac
       JOIN commesse c ON ac.commessa_id = c.id
       JOIN attivita ad ON ac.attivita_id = ad.id
-      WHERE ac.reparto_id = ? 
+      JOIN risorse r ON r.id = ac.risorsa_id         -- ✅ collega alla risorsa
+      WHERE r.reparto_id = ?
         AND ac.note IS NOT NULL
         AND ac.note NOT LIKE '[CHIUSA]%'
       ORDER BY ac.data_inizio ASC

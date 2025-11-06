@@ -407,7 +407,7 @@ router.get("/me/aperte", getUserIdFromToken, async (req, res) => {
     JOIN commesse c ON ac.commessa_id = c.id
     JOIN attivita ad ON ac.attivita_id = ad.id
     JOIN users u ON u.risorsa_id = ac.risorsa_id
-    WHERE u.id = ? AND ac.stato != 2
+    WHERE u.id = ? AND ac.stato = 1
     ORDER BY ac.data_inizio ASC;
   `;
 
@@ -475,10 +475,12 @@ router.get("/reparto/:repartoId/dashboard", async (req, res) => {
       SELECT 
         ac.id, ac.commessa_id, c.numero_commessa, ac.attivita_id,
         ad.nome_attivita, ac.data_inizio, ac.durata, ac.descrizione,
-        ac.stato, ac.note
+        ac.stato, ac.note,
+         r.nome AS risorsa_nome 
       FROM attivita_commessa ac
       JOIN commesse c ON ac.commessa_id = c.id
       JOIN attivita ad ON ac.attivita_id = ad.id
+         JOIN risorse r  ON r.id = ac.risorsa_id 
       WHERE ac.reparto_id = ?
           AND ac.stato = 1
       ORDER BY ac.data_inizio ASC
@@ -489,10 +491,12 @@ router.get("/reparto/:repartoId/dashboard", async (req, res) => {
       SELECT 
         ac.id, ac.commessa_id, c.numero_commessa, ac.attivita_id,
         ad.nome_attivita, ac.data_inizio, ac.durata, ac.descrizione,
-        ac.stato, ac.note
+        ac.stato, ac.note,
+         r.nome AS risorsa_nome 
       FROM attivita_commessa ac
       JOIN commesse c ON ac.commessa_id = c.id
       JOIN attivita ad ON ac.attivita_id = ad.id
+         JOIN risorse r  ON r.id = ac.risorsa_id 
       WHERE ac.reparto_id = ?
         AND ac.note IS NOT NULL
         AND ac.note NOT LIKE '[CHIUSA]%'

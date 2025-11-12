@@ -348,6 +348,28 @@ router.put("/:commessaId/reparti/:repartoId/stato", async (req, res) => {
       commessaId,
     ]);
 
+    console.log("🟢 STEP 2 - Aggiornamento salvato nel DB");
+
+    // 6️⃣ Recupera il nome del reparto
+    const [[reparto]] = await db.query(
+      "SELECT nome FROM reparti WHERE id = ?",
+      [repartoIdInt]
+    );
+    const repartoNome = reparto?.nome || "Sconosciuto";
+
+    console.log("🟢 STEP 3 - Reparto:", repartoNome);
+
+    // 7️⃣ Invia notifica
+    await inviaNotificaCategoria({
+      categoria: "stato_avanzamento",
+      titolo: "Aggiornamento stato avanzamento",
+      messaggio: `Il reparto ${repartoNome} ha aggiornato lo stato della commessa ${numeroCommessa}.`,
+      commessaId,
+      repartoId: repartoIdInt,
+      includiGlobali: true,
+    });
+
+    console.log("🟢 STEP 4 - Notifica inviata");
     res.status(200).send(esiste ? "Stato avanzamento aggiornato." : "Stato avanzamento creato e attivato.");
   } catch (error) {
     console.error("Errore durante l'aggiornamento dello stato avanzamento:", error);

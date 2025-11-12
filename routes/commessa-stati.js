@@ -2,7 +2,6 @@ const express = require("express");
 const router = express.Router();
 const db = require("../config/db"); // Assicurati che il percorso sia corretto
 const { verificaStatiCommesse, allineaStatiCommesse } = require("./statiAvanzamentoUtils");
-const { inviaNotificheUtenti, inviaNotificaCategoria } = require("../Utils/notificationManager");
 
 // Recupera tutti gli stati di avanzamento di una commessa specifica
 router.get("/:commessa_id", async (req, res) => {
@@ -66,8 +65,6 @@ router.put("/:commessa_id/stati/:stato_id", async (req, res) => {
   const { data_inizio, data_fine } = req.body;
 
   try {
-
-    // 1️⃣ Legge lo stato attuale della commessa
     const sql = `SELECT stati_avanzamento FROM commesse WHERE id = ?`;
     const [results] = await db.query(sql, [commessa_id]);
 
@@ -76,48 +73,16 @@ router.put("/:commessa_id/stati/:stato_id", async (req, res) => {
     }
 
     let statiAvanzamento = JSON.parse(results[0].stati_avanzamento || "[]");
-const numeroCommessa = results[0].numero_commessa;
 
-    // 2️⃣ Identifica lo stato e il reparto modificato
-    let repartoId = null;
-    let statoNome = null;
+    statiAvanzamento = statiAvanzamento.map((stato) =>
+      stato.stato_id === parseInt(stato_id)
+        ? { ...stato, data_inizio: data_inizio || stato.data_inizio, data_fine: data_fine || stato.data_fine }
+        : stato
+    );
 
-    statiAvanzamento = statiAvanzamento.map((stato) => {
-      if (stato.stato_id === parseInt(stato_id)) {
-        repartoId = stato.reparto_id;
-        statoNome = stato.nome;
-        return {
-          ...stato,
-          data_inizio: data_inizio || stato.data_inizio,
-          data_fine: data_fine || stato.data_fine,
-        };
-      }
-      return stato;
-    });
-
-     // 3️⃣ Aggiorna la commessa nel DB
     const updateSql = `UPDATE commesse SET stati_avanzamento = ? WHERE id = ?`;
     await db.query(updateSql, [JSON.stringify(statiAvanzamento), commessa_id]);
 
-        // 4️⃣ Recupera il nome del reparto
-    let repartoNome = "Sconosciuto";
-    if (repartoId) {
-      const [[r]] = await db.query(`SELECT nome FROM reparti WHERE id = ?`, [repartoId]);
-      if (r) repartoNome = r.nome;
-    }
-
-      // 5️⃣ 🔔 Invia la notifica automatica
-if (repartoId && statoNome) {
-  await inviaNotificaCategoria({
-    categoria: "stato_avanzamento",
-    titolo: "Aggiornamento stato avanzamento",
-    messaggio: `Il reparto ${repartoNome} ha aggiornato lo stato "${statoNome}" per la commessa ${numeroCommessa}.`,
-    commessaId: commessa_id,
-    repartoId, // serve per filtrare i destinatari
-    includiGlobali: true // opzionale: notifica anche i reparti interessati globalmente
-  });
-}
-    // 6️⃣ Risposta finale
     res.send("Stato avanzamento aggiornato con successo!");
   } catch (error) {
     console.error("Errore durante l'aggiornamento dello stato avanzamento:", error);

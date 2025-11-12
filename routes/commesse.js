@@ -289,7 +289,7 @@ router.put("/:commessaId/reparti/:repartoId/stato", async (req, res) => {
     if (!commessaResult || commessaResult.length === 0) {
       return res.status(404).send("Commessa non trovata.");
     }
-
+   const numeroCommessa = commessaResult[0].numero_commessa;
     let statiAvanzamento = commessaResult[0].stati_avanzamento;
     if (typeof statiAvanzamento === "string") {
       statiAvanzamento = JSON.parse(statiAvanzamento);

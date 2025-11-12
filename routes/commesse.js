@@ -284,7 +284,7 @@ router.put("/:commessaId/reparti/:repartoId/stato", async (req, res) => {
 
   try {
     // 1. Recupera la commessa
-    const [commessaResult] = await db.query("SELECT stati_avanzamento FROM commesse WHERE id = ?", [commessaId]);
+    const [commessaResult] = await db.query(  "SELECT numero_commessa, stati_avanzamento FROM commesse WHERE id = ?", [commessaId]);
 
     if (!commessaResult || commessaResult.length === 0) {
       return res.status(404).send("Commessa non trovata.");
@@ -294,6 +294,17 @@ router.put("/:commessaId/reparti/:repartoId/stato", async (req, res) => {
     if (typeof statiAvanzamento === "string") {
       statiAvanzamento = JSON.parse(statiAvanzamento);
     }
+
+       const [statoDb] = await db.query(
+      `SELECT nome_stato, ordine FROM stati_avanzamento WHERE id = ? AND reparto_id = ?`,
+      [statoIdInt, repartoIdInt]
+    );
+
+    if (!statoDb.length) {
+      return res.status(404).send("Stato avanzamento non trovato nel database.");
+    }
+
+    const { nome_stato, ordine } = statoDb[0];
 
     // 2. Controlla se esiste già lo stato
     const esiste = statiAvanzamento.some(
@@ -363,7 +374,7 @@ router.put("/:commessaId/reparti/:repartoId/stato", async (req, res) => {
     await inviaNotificaCategoria({
       categoria: "stato_avanzamento",
       titolo: "Aggiornamento stato avanzamento",
-      messaggio: `Il reparto ${repartoNome} ha aggiornato lo stato della commessa ${numeroCommessa}.`,
+      messaggio: `Il reparto ${repartoNome} ha spostato la commessa ${numeroCommessa} nello stato "${nome_stato}".`,
       commessaId,
       repartoId: repartoIdInt,
       includiGlobali: true,

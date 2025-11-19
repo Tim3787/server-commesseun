@@ -382,26 +382,36 @@ router.put("/:id", async (req, res) => {
 
 
 router.get("/dashboard", authenticateToken, async (req, res) => {
-  const userId = req.user.id;  // ID dell'utente autenticato
-
+  const userId = req.user.id;
 
   const sql = `
-    SELECT a.*, c.numero_commessa, att.nome_attivita
-    FROM attivita_commessa a
-    JOIN commesse c ON a.commessa_id = c.id
-    JOIN attivita att ON a.attivita_id = att.id
-    WHERE a.risorsa_id = (SELECT risorsa_id FROM users WHERE id = ?);
+    SELECT 
+      ac.*, 
+      c.numero_commessa, 
+      att.nome_attivita
+    FROM attivita_commessa ac
+    JOIN commesse c ON ac.commessa_id = c.id
+    JOIN attivita att ON ac.attivita_id = att.id
+    WHERE ac.risorsa_id = (SELECT risorsa_id FROM users WHERE id = ?);
   `;
 
   try {
-    const [results] = await db.query(sql, [userId]); // Passa userId come parametro
+    const [rows] = await db.query(sql, [userId]);
+
+    // 🔥 NORMALIZZO included_weekends QUI
+    const results = rows.map((r) => ({
+      ...r,
+      includedWeekends: r.included_weekends
+        ? JSON.parse(r.included_weekends)
+        : []
+    }));
+
     res.json(results);
   } catch (err) {
     console.error("Errore nel recupero delle attività:", err);
     res.status(500).send("Errore nel recupero delle attività.");
   }
 });
-
 
 
 

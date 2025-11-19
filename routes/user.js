@@ -379,40 +379,37 @@ router.put("/:id", async (req, res) => {
   }
 });
 
-
-
 router.get("/dashboard", authenticateToken, async (req, res) => {
   const userId = req.user.id;
 
   const sql = `
-    SELECT 
-      ac.*, 
-      c.numero_commessa, 
-      att.nome_attivita
-    FROM attivita_commessa ac
-    JOIN commesse c ON ac.commessa_id = c.id
-    JOIN attivita att ON ac.attivita_id = att.id
-    WHERE ac.risorsa_id = (SELECT risorsa_id FROM users WHERE id = ?);
+    SELECT a.*, c.numero_commessa, att.nome_attivita
+    FROM attivita_commessa a
+    JOIN commesse c ON a.commessa_id = c.id
+    JOIN attivita att ON a.attivita_id = att.id
+    WHERE a.risorsa_id = (SELECT risorsa_id FROM users WHERE id = ?);
   `;
 
   try {
     const [rows] = await db.query(sql, [userId]);
 
-    // 🔥 NORMALIZZO included_weekends QUI
-    const results = rows.map((r) => ({
-      ...r,
-      includedWeekends: r.included_weekends
-        ? JSON.parse(r.included_weekends)
-        : []
+    // 🔥 Converti included_weekends in array come nel calendario generale
+    const results = rows.map(a => ({
+      ...a,
+      includedWeekends: Array.isArray(a.included_weekends)
+        ? a.included_weekends
+        : (a.included_weekends
+            ? JSON.parse(a.included_weekends)
+            : [])
     }));
 
     res.json(results);
+
   } catch (err) {
     console.error("Errore nel recupero delle attività:", err);
     res.status(500).send("Errore nel recupero delle attività.");
   }
 });
-
 
 
 router.put("/:id/assign-resource", async (req, res) => {

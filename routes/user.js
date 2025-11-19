@@ -384,6 +384,7 @@ router.put("/:id", async (req, res) => {
 router.get("/dashboard", authenticateToken, async (req, res) => {
   const userId = req.user.id;  // ID dell'utente autenticato
 
+
   const sql = `
     SELECT a.*, c.numero_commessa, att.nome_attivita
     FROM attivita_commessa a
@@ -393,23 +394,14 @@ router.get("/dashboard", authenticateToken, async (req, res) => {
   `;
 
   try {
-    const [results] = await db.query(sql, [userId]);
-
-    // 🔥 Converti included_weekends in includedWeekends (array)
-    const parsed = results.map(a => ({
-      ...a,
-      includedWeekends: a.included_weekends 
-        ? JSON.parse(a.included_weekends)
-        : []   // se è null → array vuoto
-    }));
-
-    res.json(parsed);
-
+    const [results] = await db.query(sql, [userId]); // Passa userId come parametro
+    res.json(results);
   } catch (err) {
     console.error("Errore nel recupero delle attività:", err);
     res.status(500).send("Errore nel recupero delle attività.");
   }
 });
+
 
 
 

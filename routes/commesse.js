@@ -129,7 +129,7 @@ router.put("/:id", async (req, res) => {
     data_FAT = null,
     altri_particolari = "",
     cliente = "",
-     stato_commessa,
+    stato,
   } = req.body;
 
   try {
@@ -157,7 +157,7 @@ router.put("/:id", async (req, res) => {
         data_FAT,
         altri_particolari,
         cliente,
-         stato_commessa, // Corretto: stato prima di id
+        stato, // Corretto: stato prima di id
         id,    // id va come ultimo elemento
       ]
     );

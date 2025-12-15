@@ -378,22 +378,12 @@ router.put("/:id", async (req, res) => {
     res.status(500).send("Errore durante l'aggiornamento dell'utente.");
   }
 });
+
 router.get("/dashboard", authenticateToken, async (req, res) => {
   const userId = req.user.id;
 
   const sql = `
-    SELECT 
-      a.*,
-      c.numero_commessa,
-      c.cliente,
-      att.nome_attivita,
-      EXISTS (
-        SELECT 1
-        FROM ClientiSpecifiche cs
-        WHERE TRIM(cs.cliente) = TRIM(c.cliente)
-          AND cs.attivo = 1
-          AND (cs.reparto_id IS NULL OR cs.reparto_id = a.reparto_id)
-      ) AS client_has_specs
+    SELECT a.*, c.numero_commessa, att.nome_attivita
     FROM attivita_commessa a
     JOIN commesse c ON a.commessa_id = c.id
     JOIN attivita att ON a.attivita_id = att.id
@@ -403,38 +393,23 @@ router.get("/dashboard", authenticateToken, async (req, res) => {
   try {
     const [rows] = await db.query(sql, [userId]);
 
-    const results = rows.map((a) => ({
+    // 🔥 Converti included_weekends in array come nel calendario generale
+    const results = rows.map(a => ({
       ...a,
-      includedWeekends: (() => {
-        // attivita_commessa.included_weekends è JSON NOT NULL
-        // a seconda del driver può arrivare come stringa o come oggetto
-        if (Array.isArray(a.included_weekends)) return a.included_weekends;
-        if (!a.included_weekends) return [];
-        try {
-          return JSON.parse(a.included_weekends);
-        } catch (e) {
-          console.error(
-            "Errore parse included_weekends per attività",
-            a.id,
-            e
-          );
-          return [];
-        }
-      })(),
-      client_has_specs: !!a.client_has_specs,
+      includedWeekends: Array.isArray(a.included_weekends)
+        ? a.included_weekends
+        : (a.included_weekends
+            ? JSON.parse(a.included_weekends)
+            : [])
     }));
 
     res.json(results);
-} catch (err) {
-  console.error("Errore nel recupero delle attività:", err);
-  res.status(500).json({
-    message: "Errore nel recupero delle attività",
-    error: err.message,
-    code: err.code,
-    sqlMessage: err.sqlMessage,
-    sqlState: err.sqlState,
-  });
-}
+
+  } catch (err) {
+    console.error("Errore nel recupero delle attività:", err);
+    res.status(500).send("Errore nel recupero delle attività.");
+  }
+});
 
 
 router.put("/:id/assign-resource", async (req, res) => {

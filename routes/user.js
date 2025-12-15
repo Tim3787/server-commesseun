@@ -427,10 +427,16 @@ router.get("/dashboard", authenticateToken, async (req, res) => {
 
     res.json(results);
   } catch (err) {
-    console.error("Errore nel recupero delle attività:", err);
-    res.status(500).send("Errore nel recupero delle attività.");
-  }
-});
+  console.error("Errore nel recupero delle attività:", err);
+  res.status(500).json({
+    message: "Errore nel recupero delle attività",
+    error: err.message,
+    code: err.code,
+    sqlMessage: err.sqlMessage,
+    sqlState: err.sqlState,
+  });
+}
+
 
 
 

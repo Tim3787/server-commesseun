@@ -378,7 +378,6 @@ router.put("/:id", async (req, res) => {
     res.status(500).send("Errore durante l'aggiornamento dell'utente.");
   }
 });
-
 router.get("/dashboard", authenticateToken, async (req, res) => {
   const userId = req.user.id;
 
@@ -391,9 +390,9 @@ router.get("/dashboard", authenticateToken, async (req, res) => {
       EXISTS (
         SELECT 1
         FROM ClientiSpecifiche cs
-        WHERE TRIM(cs.cliente) = TRIM(c.cliente)
-          AND cs.attivo = 1
+        WHERE cs.attivo = 1
           AND (cs.reparto_id IS NULL OR cs.reparto_id = a.reparto_id)
+          AND TRIM(c.cliente) LIKE CONCAT('%', TRIM(cs.cliente), '%')
       ) AS client_has_specs
     FROM attivita_commessa a
     JOIN commesse c ON a.commessa_id = c.id
@@ -411,7 +410,7 @@ router.get("/dashboard", authenticateToken, async (req, res) => {
         : (a.included_weekends
             ? JSON.parse(a.included_weekends)
             : []),
-      client_has_specs: !!a.client_has_specs,   // 👈 unica aggiunta nel map
+      client_has_specs: !!a.client_has_specs,
     }));
 
     res.json(results);
@@ -421,6 +420,7 @@ router.get("/dashboard", authenticateToken, async (req, res) => {
     res.status(500).send("Errore nel recupero delle attività.");
   }
 });
+
 
 
 router.put("/:id/assign-resource", async (req, res) => {

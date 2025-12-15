@@ -2,42 +2,6 @@ const express = require("express");
 const router = express.Router();
 const db = require("../config/db"); // o come si chiama il tuo pool
 
-// GET /api/clienti-specifiche
-// Filtra per cliente e/o reparto_id
-router.get("/", async (req, res) => {
-  const { cliente, reparto_id, tutte } = req.query;
-
-  let sql = "SELECT * FROM ClientiSpecifiche WHERE 1=1";
-  const params = [];
-
-  // solo attive di default, TUTTE se ?tutte=1
-  if (!tutte) {
-    sql += " AND attivo = 1";
-  }
-
-  if (cliente) {
-    // Match parziale come in dashboard:
-    // es. clienteFull = "Ehcolo x KMC Brande", cliente (tabella) = "Ehcolo"
-    sql += " AND TRIM(?) LIKE CONCAT('%', TRIM(cliente), '%')";
-    params.push(cliente);
-  }
-
-  if (reparto_id) {
-    sql += " AND (reparto_id = ? OR reparto_id IS NULL)";
-    params.push(reparto_id);
-  }
-
-  sql += " ORDER BY titolo ASC";
-
-  try {
-    const [rows] = await db.query(sql, params);
-    res.json(rows);
-  } catch (err) {
-    console.error("Errore GET /clienti-specifiche:", err);
-    res.status(500).json({ error: "Errore nel recupero specifiche cliente" });
-  }
-});
-
 
 // POST /api/clienti-specifiche
 router.post("/", async (req, res) => {

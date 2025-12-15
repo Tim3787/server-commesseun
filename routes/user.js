@@ -387,7 +387,7 @@ router.get("/dashboard", authenticateToken, async (req, res) => {
       c.numero_commessa,
       c.cliente,
       att.nome_attivita,
-      -- 🔔 Flag: esistono specifiche cliente attive per questo cliente/reparto?
+      /* Flag: esistono specifiche cliente attive per questo cliente/reparto? */
       EXISTS (
         SELECT 1
         FROM ClientiSpecifiche cs
@@ -406,11 +406,22 @@ router.get("/dashboard", authenticateToken, async (req, res) => {
 
     const results = rows.map((a) => ({
       ...a,
-      includedWeekends: Array.isArray(a.included_weekends)
-        ? a.included_weekends
-        : a.included_weekends
-        ? JSON.parse(a.included_weekends)
-        : [],
+      // normalizza included_weekends
+      includedWeekends: (() => {
+        if (Array.isArray(a.included_weekends)) return a.included_weekends;
+        if (!a.included_weekends) return [];
+        try {
+          return JSON.parse(a.included_weekends);
+        } catch (e) {
+          console.error(
+            "Errore parse included_weekends per attività",
+            a.id,
+            e
+          );
+          return [];
+        }
+      })(),
+      // normalizza client_has_specs come boolean
       client_has_specs: !!a.client_has_specs,
     }));
 

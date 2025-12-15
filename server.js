@@ -22,7 +22,7 @@ const schedeMultiRoutes = require('./routes/schedeMulti');
 const uploadRoute = require("./routes/upload");
 const notifichePreferenzeRoute = require("./routes/notifichePreferenze");
 const notificheDestinatariRoute = require("./routes/notificheDestinatari");
-
+const clientiSpecificheRoutes = require("./routes/clientiSpecifiche");
 const app = express();
 const cookieParser = require("cookie-parser");
 app.use(cookieParser());
@@ -71,6 +71,9 @@ app.use('/api/notifichePreferenze', notifichePreferenzeRoute);
 app.use('/api/notificheDestinatari', notificheDestinatariRoute);
 app.use("/uploads", express.static("uploads")); // Per servire i file statici
 app.use("/api/upload", uploadRoute); // Per gestire /api/upload-image
+
+
+app.use("/api/clienti-specifiche", clientiSpecificheRoutes);
 
 // Middleware di gestione degli errori
 app.use((err, req, res, next) => {

@@ -383,7 +383,18 @@ router.get("/dashboard", authenticateToken, async (req, res) => {
   const userId = req.user.id;
 
   const sql = `
-    SELECT a.*, c.numero_commessa, att.nome_attivita
+    SELECT 
+      a.*,
+      c.numero_commessa,
+      c.cliente,
+      att.nome_attivita,
+      EXISTS (
+        SELECT 1
+        FROM ClientiSpecifiche cs
+        WHERE TRIM(cs.cliente) = TRIM(c.cliente)
+          AND cs.attivo = 1
+          AND (cs.reparto_id IS NULL OR cs.reparto_id = a.reparto_id)
+      ) AS client_has_specs
     FROM attivita_commessa a
     JOIN commesse c ON a.commessa_id = c.id
     JOIN attivita att ON a.attivita_id = att.id
@@ -393,14 +404,14 @@ router.get("/dashboard", authenticateToken, async (req, res) => {
   try {
     const [rows] = await db.query(sql, [userId]);
 
-    // 🔥 Converti included_weekends in array come nel calendario generale
     const results = rows.map(a => ({
       ...a,
       includedWeekends: Array.isArray(a.included_weekends)
         ? a.included_weekends
         : (a.included_weekends
             ? JSON.parse(a.included_weekends)
-            : [])
+            : []),
+      client_has_specs: !!a.client_has_specs,   // 👈 unica aggiunta nel map
     }));
 
     res.json(results);

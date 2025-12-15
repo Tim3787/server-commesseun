@@ -1,17 +1,22 @@
 const express = require("express");
 const router = express.Router();
 const db = require("../config/db"); // o come si chiama il tuo pool
-
 // GET /api/clienti-specifiche
 // Filtra per cliente e/o reparto_id
 router.get("/", async (req, res) => {
   const { cliente, reparto_id } = req.query;
 
-  let sql = "SELECT * FROM ClientiSpecifiche WHERE 1=1";
+  // partiamo già filtrando solo quelle attive
+  let sql = "SELECT * FROM ClientiSpecifiche WHERE attivo = 1";
   const params = [];
 
   if (cliente) {
-    sql += " AND cliente = ?";
+    // 👇 importante: il parametro `cliente` è quello completo
+    // es. "Ehcolo x KMC Brande"
+    // e nella tabella hai "Ehcolo"
+    //
+    // quindi controlliamo: 'Ehcolo x KMC Brande' LIKE '%Ehcolo%'
+    sql += " AND TRIM(?) LIKE CONCAT('%', TRIM(cliente), '%')";
     params.push(cliente);
   }
 
@@ -20,16 +25,19 @@ router.get("/", async (req, res) => {
     params.push(reparto_id);
   }
 
-  sql += " AND attivo = 1 ORDER BY titolo ASC";
+  sql += " ORDER BY titolo ASC";
 
   try {
     const [rows] = await db.query(sql, params);
     res.json(rows);
   } catch (err) {
     console.error("Errore GET /clienti-specifiche:", err);
-    res.status(500).json({ error: "Errore nel recupero specifiche cliente" });
+    res
+      .status(500)
+      .json({ error: "Errore nel recupero specifiche cliente" });
   }
 });
+
 
 // POST /api/clienti-specifiche
 router.post("/", async (req, res) => {
@@ -97,5 +105,7 @@ router.delete("/:id", async (req, res) => {
     res.status(500).json({ error: "Errore nella cancellazione della scheda cliente" });
   }
 });
+
+
 
 module.exports = router;

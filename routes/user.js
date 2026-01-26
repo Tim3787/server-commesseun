@@ -421,6 +421,51 @@ router.get("/dashboard", authenticateToken, async (req, res) => {
   }
 });
 
+router.get("/dashboard/:activityId", authenticateToken, async (req, res) => {
+  const userId = req.user.id;
+  const activityId = Number(req.params.activityId);
+
+  const sql = `
+    SELECT 
+      a.*,
+      c.numero_commessa,
+      c.cliente,
+      att.nome_attivita,
+      EXISTS (
+        SELECT 1
+        FROM ClientiSpecifiche cs
+        WHERE cs.attivo = 1
+          AND (cs.reparto_id IS NULL OR cs.reparto_id = a.reparto_id)
+          AND TRIM(c.cliente) LIKE CONCAT('%', TRIM(cs.cliente), '%')
+      ) AS client_has_specs
+    FROM attivita_commessa a
+    JOIN commesse c ON a.commessa_id = c.id
+    JOIN attivita att ON a.attivita_id = att.id
+    WHERE a.id = ?
+      AND a.risorsa_id = (SELECT risorsa_id FROM users WHERE id = ?)
+    LIMIT 1;
+  `;
+
+  try {
+    const [rows] = await db.query(sql, [activityId, userId]);
+    if (!rows.length) return res.status(404).json({ message: "Attività non trovata" });
+
+    const a = rows[0];
+
+    const result = {
+      ...a,
+      includedWeekends: Array.isArray(a.included_weekends)
+        ? a.included_weekends
+        : (a.included_weekends ? JSON.parse(a.included_weekends) : []),
+      client_has_specs: !!a.client_has_specs,
+    };
+
+    res.json(result);
+  } catch (err) {
+    console.error("Errore nel recupero dettaglio attività:", err);
+    res.status(500).send("Errore nel recupero dettaglio attività.");
+  }
+});
 
 
 router.put("/:id/assign-resource", async (req, res) => {

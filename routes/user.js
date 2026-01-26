@@ -466,7 +466,6 @@ router.get("/dashboard/:activityId", authenticateToken, async (req, res) => {
     res.status(500).send("Errore nel recupero dettaglio attività.");
   }
 });
-
 router.get(
   "/reparto-dashboard/:repartoId/activity/:activityId",
   authenticateToken,
@@ -475,8 +474,6 @@ router.get(
     const repartoId = Number(req.params.repartoId);
     const activityId = Number(req.params.activityId);
 
-    // ✅ Check permessi manager (qui usa la TUA logica)
-    // Opzione veloce: replica la stessa mappa che usi in frontend (meglio metterla lato server)
     const managerRepartoMap = {
       26: 1,
       105: 3,
@@ -488,6 +485,8 @@ router.get(
     };
 
     const allowedReparto = managerRepartoMap[userId] ?? null;
+
+    // 1) check: l’utente può accedere a questo “dashboard reparto”
     if (!allowedReparto || allowedReparto !== repartoId) {
       return res.status(403).json({ message: "Non autorizzato" });
     }
@@ -509,17 +508,22 @@ router.get(
       JOIN commesse c ON a.commessa_id = c.id
       JOIN attivita att ON a.attivita_id = att.id
       WHERE a.id = ?
-        AND a.reparto_id = ?
       LIMIT 1;
     `;
 
     try {
-      const [rows] = await db.query(sql, [activityId, repartoId]);
+      const [rows] = await db.query(sql, [activityId]); // ✅ SOLO activityId
       if (!rows.length) {
         return res.status(404).json({ message: "Attività non trovata" });
       }
 
       const a = rows[0];
+
+      // 2) check: l’attività appartiene davvero al reparto del manager
+      if (Number(a.reparto_id) !== allowedReparto) {
+        return res.status(403).json({ message: "Attività non appartenente al reparto" });
+      }
+
       const result = {
         ...a,
         includedWeekends: Array.isArray(a.included_weekends)

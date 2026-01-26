@@ -467,6 +467,74 @@ router.get("/dashboard/:activityId", authenticateToken, async (req, res) => {
   }
 });
 
+router.get(
+  "/reparto-dashboard/:repartoId/activity/:activityId",
+  authenticateToken,
+  async (req, res) => {
+    const userId = req.user.id;
+    const repartoId = Number(req.params.repartoId);
+    const activityId = Number(req.params.activityId);
+
+    // ✅ Check permessi manager (qui usa la TUA logica)
+    // Opzione veloce: replica la stessa mappa che usi in frontend (meglio metterla lato server)
+    const managerRepartoMap = {
+      26: 1,
+      105: 3,
+      106: 3,
+      44: 2,
+      107: 14,
+      77: 18,
+      84: 18,
+    };
+
+    const allowedReparto = managerRepartoMap[userId] ?? null;
+    if (!allowedReparto || allowedReparto !== repartoId) {
+      return res.status(403).json({ message: "Non autorizzato" });
+    }
+
+    const sql = `
+      SELECT 
+        a.*,
+        c.numero_commessa,
+        c.cliente,
+        att.nome_attivita,
+        EXISTS (
+          SELECT 1
+          FROM ClientiSpecifiche cs
+          WHERE cs.attivo = 1
+            AND (cs.reparto_id IS NULL OR cs.reparto_id = a.reparto_id)
+            AND TRIM(c.cliente) LIKE CONCAT('%', TRIM(cs.cliente), '%')
+        ) AS client_has_specs
+      FROM attivita_commessa a
+      JOIN commesse c ON a.commessa_id = c.id
+      JOIN attivita att ON a.attivita_id = att.id
+      WHERE a.id = ?
+        AND a.reparto_id = ?
+      LIMIT 1;
+    `;
+
+    try {
+      const [rows] = await db.query(sql, [activityId, repartoId]);
+      if (!rows.length) {
+        return res.status(404).json({ message: "Attività non trovata" });
+      }
+
+      const a = rows[0];
+      const result = {
+        ...a,
+        includedWeekends: Array.isArray(a.included_weekends)
+          ? a.included_weekends
+          : (a.included_weekends ? JSON.parse(a.included_weekends) : []),
+        client_has_specs: !!a.client_has_specs,
+      };
+
+      res.json(result);
+    } catch (err) {
+      console.error("Errore dettaglio attività reparto:", err);
+      res.status(500).send("Errore nel recupero dettaglio attività reparto.");
+    }
+  }
+);
 
 router.put("/:id/assign-resource", async (req, res) => {
   const { id } = req.params;

@@ -79,7 +79,7 @@ router.put("/:id", async (req, res) => {
         reparto_id || null,
         titolo,
         descrizione,
-        attivo !== undefined ? attivo : 1,
+        attivo !== undefined ? attivo : attivo,
         id,
       ]
     );
@@ -106,6 +106,21 @@ router.delete("/:id", async (req, res) => {
   }
 });
 
+// DELETE HARD (per admin/debug)
+router.delete("/:id/hard", async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    await db.query(
+      "DELETE FROM ClientiSpecifiche WHERE id = ?",
+      [id]
+    );
+    res.json({ success: true });
+  } catch (err) {
+    console.error("Errore DELETE HARD /clienti-specifiche:", err);
+    res.status(500).json({ error: "Errore nella cancellazione definitiva" });
+  }
+});
 
 
 module.exports = router;

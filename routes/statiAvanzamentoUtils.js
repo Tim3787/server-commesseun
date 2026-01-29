@@ -7,7 +7,20 @@ const db = require("../config/db"); // Assumi che db sia la tua connessione al d
         .replace(/\s+/g, " ");
       const TARGET_STATE = "in entrata";
 
-      
+const parseJsonField = (raw) => {
+  if (raw == null) return [];
+  if (Array.isArray(raw)) return raw;
+  if (typeof raw === "object") return []; // JSON column: se non è array, scarto
+  if (typeof raw === "string") {
+    const s = raw.trim();
+    if (!s) return [];
+    return JSON.parse(s);
+  }
+  return [];
+};
+
+
+
 // ✅ Funzione per verificare e aggiornare le commesse con gli stati mancanti
 const verificaStatiCommesse = async () => {
   try {
@@ -43,7 +56,7 @@ let skipped = 0;
     for (const commessa of commesse) {
       let statiAvanzamento = [];
       try {
-        statiAvanzamento = JSON.parse(commessa.stati_avanzamento || "[]");
+        statiAvanzamento = parseJsonField(commessa.stati_avanzamento);
         if (!Array.isArray(statiAvanzamento)) statiAvanzamento = [];
 
       } catch (err) {
@@ -127,10 +140,10 @@ if (attivi.length > 1) {
       statiAvanzamento.sort(sortFn);
 
       if (JSON.stringify(statiAggiornati) !== JSON.stringify(statiAvanzamento)) {
-        await db.query(`UPDATE commesse SET stati_avanzamento = ? WHERE id = ?`, [
-          JSON.stringify(statiAggiornati),
-          commessa.id,
-        ]);
+        await db.query(
+  `UPDATE commesse SET stati_avanzamento = ? WHERE id = ?`,
+  [statiAggiornati, commessa.id]
+);
         updated++
       }
     }
@@ -175,7 +188,8 @@ let skipped = 0;
       let statiAvanzamento = [];
 
       try {
-        statiAvanzamento = JSON.parse(commessa.stati_avanzamento || "[]");
+        statiAvanzamento = parseJsonField(commessa.stati_avanzamento);
+
         if (!Array.isArray(statiAvanzamento)) statiAvanzamento = [];
       } catch (err) {
         console.error(`Errore parsing stati_avanzamento per commessa ${commessa.id}:`, err);
@@ -183,7 +197,10 @@ let skipped = 0;
   continue;
       }
 
-      const original = JSON.parse(JSON.stringify(statiAvanzamento));
+      const original = global.structuredClone
+  ? structuredClone(statiAvanzamento)
+  : JSON.parse(JSON.stringify(statiAvanzamento));
+
 
       // 1) rimuovo stati obsoleti
       statiAvanzamento = statiAvanzamento.filter((stato) =>
@@ -240,10 +257,11 @@ if (attivi.length > 1) {
       original.sort(sortFn);
 
       if (JSON.stringify(statiAvanzamento) !== JSON.stringify(original)) {
-        await db.query(`UPDATE commesse SET stati_avanzamento = ? WHERE id = ?`, [
-          JSON.stringify(statiAvanzamento),
-          commessa.id,
-        ]);
+        await db.query(
+  `UPDATE commesse SET stati_avanzamento = ? WHERE id = ?`,
+  [statiAvanzamento, commessa.id]
+);
+
         updated++;
       }
     }

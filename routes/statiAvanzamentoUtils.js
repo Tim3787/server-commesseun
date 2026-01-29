@@ -6,18 +6,26 @@ const db = require("../config/db"); // Assumi che db sia la tua connessione al d
         .replace(/[-_]/g, " ")
         .replace(/\s+/g, " ");
       const TARGET_STATE = "in entrata";
-
 const parseJsonField = (raw) => {
   if (raw == null) return [];
   if (Array.isArray(raw)) return raw;
-  if (typeof raw === "object") return []; // JSON column: se non è array, scarto
+
+  // se arriva già parsato dal driver (json column)
+  if (typeof raw === "object") {
+    // accetto solo array, altrimenti fallback vuoto
+    return [];
+  }
+
   if (typeof raw === "string") {
     const s = raw.trim();
     if (!s) return [];
-    return JSON.parse(s);
+    const parsed = JSON.parse(s);
+    return Array.isArray(parsed) ? parsed : [];
   }
+
   return [];
 };
+
 
 
 
@@ -140,9 +148,9 @@ if (attivi.length > 1) {
       statiAvanzamento.sort(sortFn);
 
       if (JSON.stringify(statiAggiornati) !== JSON.stringify(statiAvanzamento)) {
-        await db.query(
+       await db.query(
   `UPDATE commesse SET stati_avanzamento = ? WHERE id = ?`,
-  [statiAggiornati, commessa.id]
+  [JSON.stringify(statiAggiornati), commessa.id]
 );
         updated++
       }
@@ -153,6 +161,10 @@ if (attivi.length > 1) {
     console.error("Errore durante la verifica degli stati avanzamento:", err);
   }
 };
+
+
+
+
 
 // ✅ Funzione per allineare gli stati avanzamento eliminando quelli obsoleti
 const allineaStatiCommesse = async () => {
@@ -257,9 +269,9 @@ if (attivi.length > 1) {
       original.sort(sortFn);
 
       if (JSON.stringify(statiAvanzamento) !== JSON.stringify(original)) {
-        await db.query(
+       await db.query(
   `UPDATE commesse SET stati_avanzamento = ? WHERE id = ?`,
-  [statiAvanzamento, commessa.id]
+  [JSON.stringify(statiAvanzamento), commessa.id]
 );
 
         updated++;

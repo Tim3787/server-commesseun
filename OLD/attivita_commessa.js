@@ -55,231 +55,6 @@ const getUserIdFromToken = (req, res, next) => {
   }
 };
 
-// ====== CONFIG ======
-const SERVICE_REPARTO_ID = 18;
-const SERVICE_ONLINE_RISORSA_ID = 52;
-
-// ✅ Calendario Assistenze (service online) - GET
-// GET /attivita-commessa/service-calendar?from=YYYY-MM-DD&to=YYYY-MM-DD
-router.get("/service-calendar", getUserIdFromToken, async (req, res) => {
-  const { from, to } = req.query;
-
-  if (!from || !to) {
-    return res.status(400).send("Parametri richiesti: from, to (YYYY-MM-DD)");
-  }
-
-  try {
-    const sql = `
-      SELECT 
-        ac.id, ac.commessa_id, c.numero_commessa,
-        ac.risorsa_id, r.nome AS risorsa,
-        rep.nome AS reparto,
-        ac.attivita_id, ad.nome_attivita,
-        ac.data_inizio, ac.durata, ac.stato,
-        ac.descrizione AS descrizione_attivita,
-        ac.note, ac.included_weekends,
-        ac.service_lane
-      FROM attivita_commessa ac
-      JOIN commesse c ON ac.commessa_id = c.id
-      LEFT JOIN risorse r ON ac.risorsa_id = r.id
-      JOIN attivita ad ON ac.attivita_id = ad.id
-      JOIN reparti rep ON ac.reparto_id = rep.id
-      WHERE ac.reparto_id = ?
-        AND ac.risorsa_id = ?
-        AND ac.data_inizio >= ?
-       AND ac.data_inizio < DATE_ADD(?, INTERVAL 1 DAY)
-      ORDER BY ac.data_inizio ASC, ac.service_lane ASC, ac.id ASC
-    `;
-
-    const [rows] = await db.query(sql, [
-      SERVICE_REPARTO_ID,
-      SERVICE_ONLINE_RISORSA_ID,
-      from,
-      to,
-    ]);
-
-    const results = rows.map((a) => ({
-  ...a,
-  includedWeekends:
-    typeof a.included_weekends === "string"
-      ? JSON.parse(a.included_weekends || "[]")
-      : (a.included_weekends || []),
-}));
-
-    res.json(results);
-  } catch (err) {
-    console.error("Errore service-calendar:", err);
-    res.status(500).send("Errore server.");
-  }
-});
-
-// ✅ Aggiorna lane (riga) assistenza
-// PUT /attivita-commessa/:id/service-lane  body: { service_lane: 1..N }
-router.put("/:id/service-lane", getUserIdFromToken, async (req, res) => {
-  const { id } = req.params;
-  const { service_lane } = req.body;
-
-  const lane = Number(service_lane);
-  if (!Number.isFinite(lane) || lane < 1 || lane > 20) {
-    return res.status(400).send("service_lane non valido (1..20).");
-  }
-
-  try {
-    // opzionale: sicurezza → aggiorna solo se è davvero service-online
-    const [result] = await db.query(
-      `
-      UPDATE attivita_commessa
-      SET service_lane = ?
-      WHERE id = ?
-        AND reparto_id = ?
-        AND risorsa_id = ?
-      `,
-      [lane, id, SERVICE_REPARTO_ID, SERVICE_ONLINE_RISORSA_ID]
-    );
-
-    if (result.affectedRows === 0) {
-      return res.status(404).send("Attività non trovata o non è service-online.");
-    }
-
-    res.status(200).send("Lane aggiornata.");
-  } catch (err) {
-    console.error("Errore update service_lane:", err);
-    res.status(500).send("Errore server.");
-  }
-});
-
-
-// ✅ Ottieni le attività aperte dell'utente loggato
-router.get("/me/aperte", getUserIdFromToken, async (req, res) => {
-  const userId = req.userId;
-
-  const sql = `
-    SELECT 
-      ac.id,
-      ac.commessa_id,
-      c.numero_commessa,
-      ac.attivita_id,
-      ad.nome_attivita,
-      ac.data_inizio,
-      ac.durata,
-      ac.descrizione,
-      ac.stato,
-      ac.note
-    FROM attivita_commessa ac
-    JOIN commesse c ON ac.commessa_id = c.id
-    JOIN attivita ad ON ac.attivita_id = ad.id
-    JOIN users u ON u.risorsa_id = ac.risorsa_id
-    WHERE u.id = ? AND ac.stato = 1
-    ORDER BY ac.data_inizio ASC;
-  `;
-
-  try {
-    const [rows] = await db.query(sql, [userId]);
-    res.json(rows);
-  } catch (err) {
-    console.error("Errore fetch my open activities:", err);
-    res.status(500).send("Errore server.");
-  }
-});
-
-
-// ✅ Ottieni le attività dell’utente con note aperte
-router.get("/me/note-aperte", getUserIdFromToken, async (req, res) => {
-  const userId = req.userId;
-
-  const sql = `
-    SELECT 
-      ac.id,
-      ac.commessa_id,
-      c.numero_commessa,
-      ac.attivita_id,
-      ad.nome_attivita,
-      ac.data_inizio,
-      ac.durata,
-      ac.descrizione,
-      ac.stato,
-      ac.note
-    FROM attivita_commessa ac
-    JOIN commesse c ON ac.commessa_id = c.id
-    JOIN attivita ad ON ac.attivita_id = ad.id
-    JOIN users u ON u.risorsa_id = ac.risorsa_id
-    WHERE u.id = ?
-      AND ac.note IS NOT NULL
-      AND ac.note NOT LIKE '[CHIUSA]%'
-    ORDER BY ac.data_inizio ASC;
-  `;
-
-  try {
-    const [rows] = await db.query(sql, [userId]);
-    res.json(rows);
-  } catch (err) {
-    console.error("Errore fetch my notes:", err);
-    res.status(500).send("Errore server.");
-  }
-});
-
-router.get("/reparto/:repartoId/dashboard", async (req, res) => {
-  const { repartoId } = req.params;
-
-  try {
-    // ✅ Prendi info reparto
-    const [[reparto]] = await db.query(
-      `SELECT id, nome FROM reparti WHERE id = ?`,
-      [repartoId]
-    );
-
-    if (!reparto) {
-      return res.status(404).json({ message: "Reparto non trovato" });
-    }
-
-    // ✅ Attività aperte del reparto
-    const [openActivities] = await db.query(`
-      SELECT 
-        ac.id, ac.commessa_id, c.numero_commessa, ac.attivita_id,
-        ad.nome_attivita, ac.data_inizio, ac.durata, ac.descrizione,
-        ac.stato, ac.note,
-         r.nome AS risorsa_nome 
-      FROM attivita_commessa ac
-      JOIN commesse c ON ac.commessa_id = c.id
-      JOIN attivita ad ON ac.attivita_id = ad.id
-         JOIN risorse r  ON r.id = ac.risorsa_id 
-      WHERE ac.reparto_id = ?
-          AND ac.stato = 1
-      ORDER BY ac.data_inizio ASC
-    `, [repartoId]);
-
-    // ✅ Note aperte del reparto
-    const [openNotes] = await db.query(`
-      SELECT 
-        ac.id, ac.commessa_id, c.numero_commessa, ac.attivita_id,
-        ad.nome_attivita, ac.data_inizio, ac.durata, ac.descrizione,
-        ac.stato, ac.note,
-         r.nome AS risorsa_nome 
-      FROM attivita_commessa ac
-      JOIN commesse c ON ac.commessa_id = c.id
-      JOIN attivita ad ON ac.attivita_id = ad.id
-         JOIN risorse r  ON r.id = ac.risorsa_id 
-      WHERE ac.reparto_id = ?
-        AND ac.note IS NOT NULL
-        AND ac.note NOT LIKE '[CHIUSA]%'
-      ORDER BY ac.data_inizio ASC
-    `, [repartoId]);
-
-    res.json({
-      reparto_id: reparto.id,
-      reparto_nome: reparto.nome,   // ✅ campo corretto
-      openActivitiesCount: openActivities.length,
-      openNotesCount: openNotes.length,
-      openActivities,
-      openNotes
-    });
-
-  } catch (err) {
-    console.error("Errore dashboard reparto:", err);
-    res.status(500).send("Errore server.");
-  }
-});
-
 
 // Rotta per ottenere le attività
 router.get("/", async (req, res) => {
@@ -347,20 +122,17 @@ res.json(results);
 
 // Assegnare un'attività a una commessa
 router.post("/", getUserIdFromToken, async (req, res) => {
- const {
-  commessa_id,
-  reparto_id,
-  risorsa_id,
-  attivita_id,
-  data_inizio,
-  durata,
-  descrizione = "Nessuna descrizione fornita",
-  stato,
-  includedWeekends,
-  service_lane,
-} = req.body;
-
-const lane = Number(service_lane) || 1;
+  const {
+    commessa_id,
+    reparto_id,
+    risorsa_id,
+    attivita_id,
+    data_inizio,
+    durata,
+    descrizione = "Nessuna descrizione fornita", // Valore predefinito
+    stato,
+    includedWeekends
+  } = req.body;
 
   if (!commessa_id || !reparto_id || !attivita_id || !risorsa_id || !data_inizio || !durata) {
     return res.status(400).send("Tutti i campi sono obbligatori.");
@@ -398,8 +170,8 @@ const lane = Number(service_lane) || 1;
     // Inserisce l'attività
     const query = `
         INSERT INTO attivita_commessa
-    (commessa_id, reparto_id, risorsa_id, attivita_id, data_inizio, durata, descrizione, stato, included_weekends, service_lane)
-  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    (commessa_id, reparto_id, risorsa_id, attivita_id, data_inizio, durata, descrizione, stato, included_weekends)
+  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
 `;
     const [result] = await db.query(query, [
       commessa_id,
@@ -410,8 +182,7 @@ const lane = Number(service_lane) || 1;
       durata,
       descrizione,
       stato,
-      JSON.stringify(includedWeekends || []),
-      lane, 
+      JSON.stringify(includedWeekends || [])
     ]);
 
     // Crea il messaggio
@@ -446,7 +217,6 @@ const [attivitaCreata] = await db.query(`
     a.descrizione,
     a.stato,
     a.included_weekends,
-    a.service_lane, 
     r.id AS reparto_id,
     r.nome AS nome_reparto
   FROM attivita_commessa a
@@ -457,16 +227,7 @@ const [attivitaCreata] = await db.query(`
   WHERE a.id = ?
 `, [result.insertId]);
 
-const created = attivitaCreata[0];
-
-res.status(201).json({
-  ...created,
-  includedWeekends:
-    typeof created.included_weekends === "string"
-      ? JSON.parse(created.included_weekends || "[]")
-      : (created.included_weekends || []),
-});
-
+res.status(201).json(attivitaCreata[0]);
 
   } catch (error) {
     console.error("Errore durante l'assegnazione dell'attività:", error);
@@ -623,6 +384,137 @@ router.delete("/:id", getUserIdFromToken, async (req, res) => {
   } catch (err) {
     console.error("Errore durante l'eliminazione dell'attività:", err);
     res.status(500).send("Errore durante l'eliminazione dell'attività.");
+  }
+});
+
+// ✅ Ottieni le attività aperte dell'utente loggato
+router.get("/me/aperte", getUserIdFromToken, async (req, res) => {
+  const userId = req.userId;
+
+  const sql = `
+    SELECT 
+      ac.id,
+      ac.commessa_id,
+      c.numero_commessa,
+      ac.attivita_id,
+      ad.nome_attivita,
+      ac.data_inizio,
+      ac.durata,
+      ac.descrizione,
+      ac.stato,
+      ac.note
+    FROM attivita_commessa ac
+    JOIN commesse c ON ac.commessa_id = c.id
+    JOIN attivita ad ON ac.attivita_id = ad.id
+    JOIN users u ON u.risorsa_id = ac.risorsa_id
+    WHERE u.id = ? AND ac.stato = 1
+    ORDER BY ac.data_inizio ASC;
+  `;
+
+  try {
+    const [rows] = await db.query(sql, [userId]);
+    res.json(rows);
+  } catch (err) {
+    console.error("Errore fetch my open activities:", err);
+    res.status(500).send("Errore server.");
+  }
+});
+
+
+// ✅ Ottieni le attività dell’utente con note aperte
+router.get("/me/note-aperte", getUserIdFromToken, async (req, res) => {
+  const userId = req.userId;
+
+  const sql = `
+    SELECT 
+      ac.id,
+      ac.commessa_id,
+      c.numero_commessa,
+      ac.attivita_id,
+      ad.nome_attivita,
+      ac.data_inizio,
+      ac.durata,
+      ac.descrizione,
+      ac.stato,
+      ac.note
+    FROM attivita_commessa ac
+    JOIN commesse c ON ac.commessa_id = c.id
+    JOIN attivita ad ON ac.attivita_id = ad.id
+    JOIN users u ON u.risorsa_id = ac.risorsa_id
+    WHERE u.id = ?
+      AND ac.note IS NOT NULL
+      AND ac.note NOT LIKE '[CHIUSA]%'
+    ORDER BY ac.data_inizio ASC;
+  `;
+
+  try {
+    const [rows] = await db.query(sql, [userId]);
+    res.json(rows);
+  } catch (err) {
+    console.error("Errore fetch my notes:", err);
+    res.status(500).send("Errore server.");
+  }
+});
+
+router.get("/reparto/:repartoId/dashboard", async (req, res) => {
+  const { repartoId } = req.params;
+
+  try {
+    // ✅ Prendi info reparto
+    const [[reparto]] = await db.query(
+      `SELECT id, nome FROM reparti WHERE id = ?`,
+      [repartoId]
+    );
+
+    if (!reparto) {
+      return res.status(404).json({ message: "Reparto non trovato" });
+    }
+
+    // ✅ Attività aperte del reparto
+    const [openActivities] = await db.query(`
+      SELECT 
+        ac.id, ac.commessa_id, c.numero_commessa, ac.attivita_id,
+        ad.nome_attivita, ac.data_inizio, ac.durata, ac.descrizione,
+        ac.stato, ac.note,
+         r.nome AS risorsa_nome 
+      FROM attivita_commessa ac
+      JOIN commesse c ON ac.commessa_id = c.id
+      JOIN attivita ad ON ac.attivita_id = ad.id
+         JOIN risorse r  ON r.id = ac.risorsa_id 
+      WHERE ac.reparto_id = ?
+          AND ac.stato = 1
+      ORDER BY ac.data_inizio ASC
+    `, [repartoId]);
+
+    // ✅ Note aperte del reparto
+    const [openNotes] = await db.query(`
+      SELECT 
+        ac.id, ac.commessa_id, c.numero_commessa, ac.attivita_id,
+        ad.nome_attivita, ac.data_inizio, ac.durata, ac.descrizione,
+        ac.stato, ac.note,
+         r.nome AS risorsa_nome 
+      FROM attivita_commessa ac
+      JOIN commesse c ON ac.commessa_id = c.id
+      JOIN attivita ad ON ac.attivita_id = ad.id
+         JOIN risorse r  ON r.id = ac.risorsa_id 
+      WHERE ac.reparto_id = ?
+        AND ac.note IS NOT NULL
+        AND ac.note NOT LIKE '[CHIUSA]%'
+      ORDER BY ac.data_inizio ASC
+    `, [repartoId]);
+
+    res.json({
+      reparto_id: reparto.id,
+      reparto_nome: reparto.nome,   // ✅ campo corretto
+      openActivitiesCount: openActivities.length,
+      openNotesCount: openNotes.length,
+      openActivities,
+      openNotes
+    });
+
+  } catch (err) {
+    console.error("Errore dashboard reparto:", err);
+    res.status(500).send("Errore server.");
   }
 });
 

@@ -23,12 +23,18 @@ router.get("/tag", async (req, res) => {
     res.status(500).json({ error: "Errore nel recupero dei tag" });
   }
 });
-
-router.get('/tipiSchedaTecnica', async (req, res) => {
-  const [tipi] = await db.query(`SELECT id, nome, categoria FROM TipiSchedaTecnica`);
-  res.json(tipi);
-});
 **/
+router.get("/tipiSchedaTecnica", async (req, res) => {
+  try {
+    const [tipi] = await db.query(
+      `SELECT id, nome, categoria FROM TipiSchedaTecnica ORDER BY nome ASC`
+    );
+    res.json(tipi);
+  } catch (err) {
+    console.error("Errore nel recupero tipi scheda:", err);
+    res.status(500).send("Errore nel recupero tipi scheda");
+  }
+});
 
 // GET /api/schedeTecniche/tag?reparto=software&includeGlobal=1&search=uca
 router.get("/tag", async (req, res) => {

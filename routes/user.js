@@ -50,9 +50,11 @@ const getUserIdFromToken = (req, res, next) => {
 
   const token = authHeader.split(" ")[1];
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    req.userId = decoded.id; // Salva l'id utente decodificato nella richiesta
-    next();
+const decoded = jwt.verify(token, process.env.JWT_SECRET);
+req.userId = decoded.id;
+req.risorsaId = decoded.risorsa_id || null;
+req.repartoId = decoded.reparto_id || null;
+next();
   } catch (err) {
     res.status(403).send("Token non valido.");
   }
@@ -102,7 +104,16 @@ router.post("/login", async (req, res) => {
   }
 
   try {
-    const [rows] = await db.query("SELECT * FROM users WHERE username = ?", [username]);
+    const [rows] = await db.query(`
+  SELECT 
+    u.id, u.username, u.password, u.role_id, u.risorsa_id,
+    r.reparto_id, r.reparto
+  FROM users u
+  LEFT JOIN risorse r ON r.id = u.risorsa_id
+  WHERE u.username = ?
+  LIMIT 1
+`, [username]);
+
     console.log("Risultato query utente:", rows);  // Logga il risultato della query
 
     if (rows.length === 0) {
@@ -118,9 +129,17 @@ router.post("/login", async (req, res) => {
       return res.status(401).send("Credenziali non valide.");
     }
 
-    const token = jwt.sign({ id: user.id, role_id: user.role_id }, process.env.JWT_SECRET, {
-      expiresIn: "1h",
-    });
+const payload = {
+  id: user.id,
+  username: user.username,
+  role_id: user.role_id,
+  risorsa_id: user.risorsa_id || null,
+  reparto_id: user.reparto_id || null,
+  reparto: user.reparto || null, // opzionale ma comodo
+};
+
+const token = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: "1h" });
+
 
     const refreshToken = jwt.sign({ id: user.id }, process.env.REFRESH_TOKEN_SECRET, {
       expiresIn: "7d",
@@ -138,7 +157,8 @@ router.post("/login", async (req, res) => {
     });
 
     console.log("Login riuscito, token generato.");
-    res.json({ token, role_id: user.role_id });
+    res.json({ token, role_id: user.role_id, reparto_id: user.reparto_id, risorsa_id: user.risorsa_id });
+
   } catch (error) {
     console.error("Errore nel login:", error);
     res.status(500).send("Errore nel login.");
@@ -157,20 +177,34 @@ router.post("/refresh-token", async (req, res) => {
   try {
     const decoded = jwt.verify(refreshToken, process.env.REFRESH_TOKEN_SECRET);
 
-    const [rows] = await db.query("SELECT * FROM users WHERE id = ? AND refresh_token = ?", [
-      decoded.id,
-      refreshToken,
-    ]);
+    const [rows] = await db.query(`
+  SELECT 
+    u.id, u.username, u.role_id, u.risorsa_id,
+    r.reparto_id, r.reparto,
+    u.refresh_token
+  FROM users u
+  LEFT JOIN risorse r ON r.id = u.risorsa_id
+  WHERE u.id = ? AND u.refresh_token = ?
+  LIMIT 1
+`, [decoded.id, refreshToken]);
 
-    if (rows.length === 0) {
-      return res.status(401).send("Token di refresh non valido.");
-    }
+if (!rows.length) return res.status(401).send("Token di refresh non valido.");
 
-    const newAccessToken = jwt.sign({ id: decoded.id, role_id: rows[0].role_id }, process.env.JWT_SECRET, {
-      expiresIn: "1h",
-    });
+const u = rows[0];
 
-    res.json({ accessToken: newAccessToken });
+const payload = {
+  id: u.id,
+  username: u.username,
+  role_id: u.role_id,
+  risorsa_id: u.risorsa_id || null,
+  reparto_id: u.reparto_id || null,
+  reparto: u.reparto || null,
+};
+
+const newAccessToken = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: "1h" });
+
+res.json({ accessToken: newAccessToken });
+
   } catch (err) {
     console.error("Errore durante il refresh del token:", err);
     return res.status(403).send("Token di refresh non valido o scaduto.");

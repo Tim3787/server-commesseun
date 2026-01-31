@@ -243,18 +243,26 @@ router.put("/:id/tags-by-names", authenticateToken, async (req, res) => {
     const tagIds = [];
     for (const nome of cleanNames) {
       const [found] = await conn.query(
-        `SELECT id FROM tag WHERE attivo = 1 AND prefisso = ? AND nome = ? AND (reparto = ? OR reparto IS NULL) LIMIT 1`,
-        [prefisso, nome, reparto || null]
-      );
+  `SELECT id FROM \`tag\`
+   WHERE attivo = 1
+     AND prefisso = ?
+     AND nome = ?
+     AND (reparto = ? OR reparto IS NULL)
+   LIMIT 1`,
+  [prefisso, nome, reparto || null]
+);
 
       if (found.length) {
         tagIds.push(found[0].id);
       } else {
-        const [ins] = await conn.query(
-          `INSERT INTO tag (prefisso, nome, reparto, colore, attivo)
-           VALUES (?, ?, ?, NULL, 1)`,
-          [prefisso, nome, reparto || null]
-        );
+const defaultColor = "#888888"; // scegli tu
+
+const [ins] = await conn.query(
+  `INSERT INTO \`tag\` (prefisso, nome, reparto, colore, attivo)
+   VALUES (?, ?, ?, ?, 1)`,
+  [prefisso, nome, reparto || null, defaultColor]
+);
+
         tagIds.push(ins.insertId);
       }
     }

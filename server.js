@@ -26,6 +26,8 @@ const clientiSpecificheRoutes = require("./routes/clientiSpecifiche");
 const app = express();
 const cookieParser = require("cookie-parser");
 app.use(cookieParser());
+const tagsRoutes = require("./routes/tags");
+
 
 
 
@@ -71,7 +73,7 @@ app.use('/api/notifichePreferenze', notifichePreferenzeRoute);
 app.use('/api/notificheDestinatari', notificheDestinatariRoute);
 app.use("/uploads", express.static("uploads")); // Per servire i file statici
 app.use("/api/upload", uploadRoute); // Per gestire /api/upload-image
-
+app.use("/api/tags", tagsRoutes);
 
 app.use("/api/clienti-specifiche", clientiSpecificheRoutes);
 

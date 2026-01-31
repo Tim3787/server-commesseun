@@ -9,7 +9,7 @@ function estraiHashtag(testo) {
   return matches ? matches.map(tag => tag.substring(1)) : [];
 }
 
-
+/**
 // GET /api/schedeTecniche/tag - restituisce tutti i tag distinti usati nelle note
 router.get("/tag", async (req, res) => {
   try {
@@ -28,8 +28,45 @@ router.get('/tipiSchedaTecnica', async (req, res) => {
   const [tipi] = await db.query(`SELECT id, nome, categoria FROM TipiSchedaTecnica`);
   res.json(tipi);
 });
+**/
 
+// GET /api/schedeTecniche/tag?reparto=software&includeGlobal=1&search=uca
+router.get("/tag", async (req, res) => {
+  try {
+    const { reparto, includeGlobal, search } = req.query;
+    const includeGlobalBool = includeGlobal === "1";
 
+    let sql = `
+      SELECT id, prefisso, nome, reparto, colore
+      FROM tag
+      WHERE attivo = 1
+    `;
+    const params = [];
+
+    if (reparto) {
+      if (includeGlobalBool) {
+        sql += ` AND (reparto = ? OR reparto IS NULL)`;
+        params.push(reparto);
+      } else {
+        sql += ` AND reparto = ?`;
+        params.push(reparto);
+      }
+    }
+
+    if (search && search.trim()) {
+      sql += ` AND (nome LIKE CONCAT('%', ?, '%') OR prefisso LIKE CONCAT('%', ?, '%'))`;
+      params.push(search.trim(), search.trim());
+    }
+
+    sql += ` ORDER BY (reparto IS NULL), prefisso, nome`;
+
+    const [rows] = await db.query(sql, params);
+    res.json(rows);
+  } catch (err) {
+    console.error("Errore nel recupero dei tag:", err);
+    res.status(500).json({ error: "Errore nel recupero dei tag" });
+  }
+});
 
 router.post('/tipiSchedaTecnica', async (req, res) => {
   const { nome } = req.body;
@@ -39,7 +76,72 @@ router.post('/tipiSchedaTecnica', async (req, res) => {
   );
   res.json({ id: result.insertId, nome });
 });
+// GET /api/schedeTecniche/:id/tags
+router.get("/:id/tags", async (req, res) => {
+  const { id } = req.params;
+  try {
+    const [rows] = await db.query(
+      `
+      SELECT t.id, t.prefisso, t.nome, t.reparto, t.colore
+      FROM scheda_tag st
+      JOIN tag t ON t.id = st.tag_id
+      WHERE st.scheda_id = ?
+      ORDER BY t.prefisso, t.nome
+      `,
+      [id]
+    );
+    res.json(rows);
+  } catch (err) {
+    console.error("Errore nel recupero tag scheda:", err);
+    res.status(500).json({ error: "Errore nel recupero tag scheda" });
+  }
+});
 
+// 🔹 GET tutte le schede per una commessa
+router.get("/:commessaId/schede", async (req, res) => {
+  const { commessaId } = req.params;
+  try {
+    const [results] = await db.query(
+      `SELECT 
+        s.id, s.commessa_id, s.tipo_id, s.titolo,
+        s.intestazione, s.contenuto, s.note,
+        s.data_modifica, s.data_creazione, s.creata_da,
+        t.nome AS tipo,
+        u.username AS creato_da_nome
+      FROM SchedeTecniche s
+      JOIN TipiSchedaTecnica t ON s.tipo_id = t.id
+      LEFT JOIN users u ON s.creata_da = u.id
+      WHERE s.commessa_id = ?
+      ORDER BY s.data_modifica DESC`,
+      [commessaId]
+    );
+    res.json(results);
+  } catch (err) {
+    console.error("Errore nel recupero delle schede:", err.message);
+    res.status(500).send("Errore nel recupero delle schede.");
+  }
+});
+
+// GET /api/schedeTecniche/by-tag/:tagId
+router.get("/by-tag/:tagId", async (req, res) => {
+  const { tagId } = req.params;
+  try {
+    const [rows] = await db.query(`
+      SELECT s.*
+      FROM SchedeTecniche s
+      JOIN scheda_tag st ON st.scheda_id = s.id
+      WHERE st.tag_id = ?
+      ORDER BY s.data_modifica DESC
+    `, [tagId]);
+
+    res.json(rows);
+  } catch (err) {
+    console.error("Errore ricerca schede per tag:", err);
+    res.status(500).json({ error: "Errore interno del server" });
+  }
+});
+
+/**
 // POST /api/schedeTecniche/tags - aggiunge un nuovo tag per una scheda
 router.post("/tags", async (req, res) => {
   const { scheda_id, tags } = req.body;
@@ -69,30 +171,90 @@ router.post("/tags", async (req, res) => {
     res.status(500).json({ error: "Errore interno durante il salvataggio dei tag." });
   }
 });
+**/
 
-// 🔹 GET tutte le schede per una commessa
-router.get("/:commessaId/schede", async (req, res) => {
-  const { commessaId } = req.params;
+
+// PUT /api/schedeTecniche/:id/tags
+// Body: { tagIds: [1,2,3] }
+router.put("/:id/tags", async (req, res) => {
+  const { id } = req.params;
+  const { tagIds } = req.body;
+
+  if (!Array.isArray(tagIds)) {
+    return res.status(400).json({ error: "tagIds deve essere un array" });
+  }
+
+  const cleanTagIds = [...new Set(tagIds.map(Number))].filter(
+    (n) => Number.isInteger(n) && n > 0
+  );
+
+  const conn = await db.getConnection();
   try {
-    const [results] = await db.query(
-      `SELECT 
-        s.id, s.commessa_id, s.tipo_id, s.titolo,
-        s.intestazione, s.contenuto, s.note,
-        s.data_modifica, s.data_creazione, s.creata_da,
-        t.nome AS tipo,
-        u.username AS creato_da_nome
-      FROM SchedeTecniche s
-      JOIN TipiSchedaTecnica t ON s.tipo_id = t.id
-      LEFT JOIN users u ON s.creata_da = u.id
-      WHERE s.commessa_id = ?
-      ORDER BY s.data_modifica DESC`,
-      [commessaId]
-    );
+    await conn.beginTransaction();
+
+    // verifica scheda esiste
+    const [scheda] = await conn.query(`SELECT id FROM SchedeTecniche WHERE id = ?`, [id]);
+    if (!scheda.length) {
+      await conn.rollback();
+      return res.status(404).json({ error: "Scheda non trovata" });
+    }
+
+    // cancella relazioni esistenti
+    await conn.query(`DELETE FROM scheda_tag WHERE scheda_id = ?`, [id]);
+
+    // inserisci nuove relazioni (solo tag validi e attivi)
+    if (cleanTagIds.length) {
+      const [valid] = await conn.query(
+        `SELECT id FROM tag WHERE attivo = 1 AND id IN (${cleanTagIds
+          .map(() => "?")
+          .join(",")})`,
+        cleanTagIds
+      );
+
+      const validSet = new Set(valid.map((r) => r.id));
+      const finalIds = cleanTagIds.filter((tid) => validSet.has(tid));
+
+      if (finalIds.length) {
+        const values = finalIds.map((tid) => [Number(id), tid]);
+        await conn.query(`INSERT INTO scheda_tag (scheda_id, tag_id) VALUES ?`, [values]);
+      }
+    }
+
+    await conn.commit();
+    res.json({ success: true });
+  } catch (err) {
+    await conn.rollback();
+    console.error("Errore salvataggio tag scheda:", err);
+    res.status(500).json({ error: "Errore interno durante il salvataggio dei tag." });
+  } finally {
+    conn.release();
+  }
+});
+router.get("/:schedaId/modifiche", async (req, res) => {
+  const { schedaId } = req.params;
+  try {
+    const [results] = await db.query(`
+      SELECT sm.id, sm.data_modifica, sm.descrizione, r.nome AS risorsa_nome
+      FROM SchedeModifiche sm
+      LEFT JOIN Risorse r ON sm.risorsa_id = r.id
+      WHERE sm.scheda_id = ?
+      ORDER BY sm.data_modifica DESC
+    `, [schedaId]);
+
     res.json(results);
   } catch (err) {
-    console.error("Errore nel recupero delle schede:", err.message);
-    res.status(500).send("Errore nel recupero delle schede.");
+    console.error("Errore nel recupero modifiche:", err.message);
+    console.error(err);
+    res.status(500).send("Errore nel recupero modifiche.");
   }
+});
+
+
+
+router.delete('/tipiSchedaTecnica/:id', async (req, res) => {
+  const { id } = req.params;
+  await db.query(`DELETE FROM TipiSchedaTecnica WHERE id = ?`, [id]);
+  res.json({ success: true });
 });
 
 
@@ -185,7 +347,7 @@ router.put("/:id", async (req, res) => {
       id
     ]);
 
-    
+    /**
     // 🏷️ 1. Estrai hashtag dalla nota
     const tags = estraiHashtag(note);
 
@@ -196,7 +358,7 @@ router.put("/:id", async (req, res) => {
     for (const tag of tags) {
       await conn.query("INSERT INTO SchedeTag (scheda_id, tag) VALUES (?, ?)", [id, tag]);
     }
-    
+     **/
     // 📝 Inserisci log modifica, se specificato
     if (risorsa_id && descrizione) {
       await conn.query(`
@@ -255,26 +417,6 @@ router.delete("/:id", async (req, res) => {
 });
 
 
-router.get("/:schedaId/modifiche", async (req, res) => {
-  const { schedaId } = req.params;
-  try {
-    const [results] = await db.query(`
-      SELECT sm.id, sm.data_modifica, sm.descrizione, r.nome AS risorsa_nome
-      FROM SchedeModifiche sm
-      LEFT JOIN Risorse r ON sm.risorsa_id = r.id
-      WHERE sm.scheda_id = ?
-      ORDER BY sm.data_modifica DESC
-    `, [schedaId]);
-
-    res.json(results);
-  } catch (err) {
-    console.error("Errore nel recupero modifiche:", err.message);
-    console.error(err);
-    res.status(500).send("Errore nel recupero modifiche.");
-  }
-});
-
-
 router.get("/:id", async (req, res) => {
   const { id } = req.params;
   try {
@@ -288,14 +430,6 @@ router.get("/:id", async (req, res) => {
   }
 });
 
-
-
-
-router.delete('/tipiSchedaTecnica/:id', async (req, res) => {
-  const { id } = req.params;
-  await db.query(`DELETE FROM TipiSchedaTecnica WHERE id = ?`, [id]);
-  res.json({ success: true });
-});
 
 
 // DELETE /api/schede/immagini/:id
@@ -326,7 +460,7 @@ router.delete("/immagini/:id", async (req, res) => {
   }
 });
 
-
+/**
 // GET /api/schedeTecniche/tag/:tag
 router.get("/tag/:tag", async (req, res) => {
   const { tag } = req.params;
@@ -344,6 +478,6 @@ router.get("/tag/:tag", async (req, res) => {
     res.status(500).json({ error: "Errore interno del server" });
   }
 });
-
+/**/
 
 module.exports = router;

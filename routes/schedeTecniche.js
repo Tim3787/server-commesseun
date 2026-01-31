@@ -3,7 +3,23 @@ const router = express.Router();
 const db = require("../config/db");
 const path = require("path");
 const fs = require("fs");
+const jwt = require("jsonwebtoken");
 
+function authenticateToken(req, res, next) {
+  const authHeader = req.headers["authorization"];
+  const token = authHeader && authHeader.split(" ")[1];
+
+  if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    return res.status(401).json({ error: "Token mancante" });
+  }
+
+  try {
+    req.user = jwt.verify(token, process.env.JWT_SECRET);
+    next();
+  } catch (err) {
+    return res.status(403).json({ error: "Token non valido" });
+  }
+}
 function estraiHashtag(testo) {
   const matches = testo.match(/#\w+/g);
   return matches ? matches.map(tag => tag.substring(1)) : [];
@@ -178,78 +194,102 @@ router.post("/tags", async (req, res) => {
   }
 });
 **/
-
 // PUT /api/schedeTecniche/:id/tags-by-names
 // Body: { names: ["pippo","plc_test"] }
-router.put("/:id/tags-by-names", async (req, res) => {
-  const { id } = req.params;
+router.put("/:id/tags-by-names", authenticateToken, async (req, res) => {
+  const schedaId = Number(req.params.id);
   const { names } = req.body;
 
-  if (!Array.isArray(names)) return res.status(400).json({ error: "names deve essere un array" });
+  if (!schedaId || !Array.isArray(names)) {
+    return res.status(400).json({ error: "Parametri non validi" });
+  }
 
-  // ⚠️ qui recupera reparto dell’utente (dal token)
-  // serve middleware authenticateToken e poi req.user.reparto / reparto_id
-  // per ora assumo: req.user.reparto === "Software"
-  const reparto = (req.user?.reparto || null); // es "Software"
-  const prefisso = reparto ? reparto.slice(0,2).toUpperCase() : null; // es "SW" (meglio una mappa)
-
+  // pulizia nomi
   const cleanNames = [...new Set(
-    names.map(s => String(s).trim().toLowerCase()).filter(Boolean)
+    names
+      .map((s) => String(s || "").trim().toLowerCase())
+      .filter(Boolean)
   )];
+
+  // reparto dal token (tu lo hai già nel token)
+  const reparto = (req.user?.reparto || "").toLowerCase();
+  const repartoId = req.user?.reparto_id || null;
+
+  // prefisso: usa quello del reparto (fallback hardcoded)
+  const prefixMap = {
+    software: "SW",
+    meccanico: "ME",
+    elettrico: "EL",
+    quadri: "QE",
+    service: "SV",
+  };
+  const prefisso = prefixMap[reparto] || "GEN";
 
   const conn = await db.getConnection();
   try {
     await conn.beginTransaction();
 
-    // scheda esiste
-    const [scheda] = await conn.query(`SELECT id FROM SchedeTecniche WHERE id = ?`, [id]);
-    if (!scheda.length) {
+    // verifica scheda esiste
+    const [schedaRows] = await conn.query(
+      "SELECT id FROM SchedeTecniche WHERE id = ?",
+      [schedaId]
+    );
+    if (!schedaRows.length) {
       await conn.rollback();
       return res.status(404).json({ error: "Scheda non trovata" });
     }
 
-    // 1) crea tag mancanti
+    // 1) per ogni nome: crea tag se non esiste, poi prendi id
+    const tagIds = [];
     for (const nome of cleanNames) {
-      // unico per (reparto, nome) — se vuoi global, gestiscilo a parte
-      const [ex] = await conn.query(
-        `SELECT id FROM tag WHERE attivo=1 AND nome = ? AND ((reparto IS NULL AND ? IS NULL) OR reparto = ?) LIMIT 1`,
-        [nome, reparto, reparto]
+      const [found] = await conn.query(
+        `SELECT id FROM tag WHERE attivo = 1 AND prefisso = ? AND nome = ? AND (reparto = ? OR reparto IS NULL) LIMIT 1`,
+        [prefisso, nome, reparto || null]
       );
 
-      if (!ex.length) {
-        await conn.query(
-          `INSERT INTO tag (prefisso, nome, reparto, attivo) VALUES (?, ?, ?, 1)`,
-          [prefisso, nome, reparto]
+      if (found.length) {
+        tagIds.push(found[0].id);
+      } else {
+        const [ins] = await conn.query(
+          `INSERT INTO tag (prefisso, nome, reparto, colore, attivo)
+           VALUES (?, ?, ?, NULL, 1)`,
+          [prefisso, nome, reparto || null]
         );
+        tagIds.push(ins.insertId);
       }
     }
 
-    // 2) prendi gli id finali
-    const [rows] = await conn.query(
-      `SELECT id FROM tag WHERE attivo=1 AND nome IN (${cleanNames.map(()=>"?").join(",")})
-       AND ((reparto IS NULL AND ? IS NULL) OR reparto = ?)`,
-      [...cleanNames, reparto, reparto]
-    );
+    // 2) aggiorna relazioni scheda_tag
+    await conn.query(`DELETE FROM scheda_tag WHERE scheda_id = ?`, [schedaId]);
 
-    const finalIds = rows.map(r => r.id);
-
-    // 3) replace relazioni
-    await conn.query(`DELETE FROM scheda_tag WHERE scheda_id = ?`, [id]);
-    if (finalIds.length) {
-      const values = finalIds.map(tid => [Number(id), tid]);
-      await conn.query(`INSERT INTO scheda_tag (scheda_id, tag_id) VALUES ?`, [values]);
+    if (tagIds.length) {
+      const values = tagIds.map((tid) => [schedaId, tid]);
+      await conn.query(
+        `INSERT INTO scheda_tag (scheda_id, tag_id) VALUES ?`,
+        [values]
+      );
     }
 
     await conn.commit();
-    res.json({ success: true, tagIds: finalIds });
+
+    res.json({
+      success: true,
+      reparto,
+      repartoId,
+      prefisso,
+      names: cleanNames,
+      tagIds,
+    });
   } catch (err) {
     await conn.rollback();
-    console.error(err);
-    res.status(500).json({ error: "Errore interno" });
+    console.error("tags-by-names ERROR:", err);
+    console.error(err?.stack);
+    res.status(500).json({ error: "Errore interno", detail: err?.message });
   } finally {
     conn.release();
   }
 });
+
 
 // PUT /api/schedeTecniche/:id/tags
 // Body: { tagIds: [1,2,3] }

@@ -179,6 +179,77 @@ router.post("/tags", async (req, res) => {
 });
 **/
 
+// PUT /api/schedeTecniche/:id/tags-by-names
+// Body: { names: ["pippo","plc_test"] }
+router.put("/:id/tags-by-names", async (req, res) => {
+  const { id } = req.params;
+  const { names } = req.body;
+
+  if (!Array.isArray(names)) return res.status(400).json({ error: "names deve essere un array" });
+
+  // ⚠️ qui recupera reparto dell’utente (dal token)
+  // serve middleware authenticateToken e poi req.user.reparto / reparto_id
+  // per ora assumo: req.user.reparto === "Software"
+  const reparto = (req.user?.reparto || null); // es "Software"
+  const prefisso = reparto ? reparto.slice(0,2).toUpperCase() : null; // es "SW" (meglio una mappa)
+
+  const cleanNames = [...new Set(
+    names.map(s => String(s).trim().toLowerCase()).filter(Boolean)
+  )];
+
+  const conn = await db.getConnection();
+  try {
+    await conn.beginTransaction();
+
+    // scheda esiste
+    const [scheda] = await conn.query(`SELECT id FROM SchedeTecniche WHERE id = ?`, [id]);
+    if (!scheda.length) {
+      await conn.rollback();
+      return res.status(404).json({ error: "Scheda non trovata" });
+    }
+
+    // 1) crea tag mancanti
+    for (const nome of cleanNames) {
+      // unico per (reparto, nome) — se vuoi global, gestiscilo a parte
+      const [ex] = await conn.query(
+        `SELECT id FROM tag WHERE attivo=1 AND nome = ? AND ((reparto IS NULL AND ? IS NULL) OR reparto = ?) LIMIT 1`,
+        [nome, reparto, reparto]
+      );
+
+      if (!ex.length) {
+        await conn.query(
+          `INSERT INTO tag (prefisso, nome, reparto, attivo) VALUES (?, ?, ?, 1)`,
+          [prefisso, nome, reparto]
+        );
+      }
+    }
+
+    // 2) prendi gli id finali
+    const [rows] = await conn.query(
+      `SELECT id FROM tag WHERE attivo=1 AND nome IN (${cleanNames.map(()=>"?").join(",")})
+       AND ((reparto IS NULL AND ? IS NULL) OR reparto = ?)`,
+      [...cleanNames, reparto, reparto]
+    );
+
+    const finalIds = rows.map(r => r.id);
+
+    // 3) replace relazioni
+    await conn.query(`DELETE FROM scheda_tag WHERE scheda_id = ?`, [id]);
+    if (finalIds.length) {
+      const values = finalIds.map(tid => [Number(id), tid]);
+      await conn.query(`INSERT INTO scheda_tag (scheda_id, tag_id) VALUES ?`, [values]);
+    }
+
+    await conn.commit();
+    res.json({ success: true, tagIds: finalIds });
+  } catch (err) {
+    await conn.rollback();
+    console.error(err);
+    res.status(500).json({ error: "Errore interno" });
+  } finally {
+    conn.release();
+  }
+});
 
 // PUT /api/schedeTecniche/:id/tags
 // Body: { tagIds: [1,2,3] }

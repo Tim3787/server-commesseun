@@ -220,8 +220,9 @@ router.put("/:id/tags-by-names", authenticateToken, async (req, res) => {
     software: "SW",
     meccanico: "ME",
     elettrico: "EL",
-    quadri: "QE",
+    quadristi: "QE",
     service: "SV",
+    "Tecnico elettrico":"TE",
   };
   const prefisso = prefixMap[reparto] || "GEN";
 

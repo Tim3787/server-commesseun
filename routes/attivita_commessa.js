@@ -625,6 +625,56 @@ router.delete("/:id", getUserIdFromToken, async (req, res) => {
     res.status(500).send("Errore durante l'eliminazione dell'attività.");
   }
 });
+// ✅ Note aperte collegate (stessa commessa + reparto)
+router.get("/open-notes", getUserIdFromToken, async (req, res) => {
+  const { commessa_id, reparto_id, exclude_id } = req.query;
+
+  if (!commessa_id || !reparto_id) {
+    return res.status(400).json({ message: "commessa_id e reparto_id sono richiesti" });
+  }
+
+  const params = [commessa_id, reparto_id];
+
+  let sql = `
+    SELECT
+      ac.id,
+      ac.commessa_id,
+      c.numero_commessa,
+      ac.reparto_id,
+      ac.attivita_id,
+      ad.nome_attivita,
+      ac.risorsa_id,
+      r.nome AS risorsa_nome,
+      ac.data_inizio,
+      ac.stato,
+      ac.descrizione,
+      ac.note
+    FROM attivita_commessa ac
+    JOIN commesse c ON c.id = ac.commessa_id
+    JOIN attivita ad ON ad.id = ac.attivita_id
+    LEFT JOIN risorse r ON r.id = ac.risorsa_id
+    WHERE ac.commessa_id = ?
+      AND ac.reparto_id = ?
+      AND ac.note IS NOT NULL
+      AND TRIM(ac.note) <> ''
+      AND UPPER(ac.note) NOT LIKE '[CHIUSA]%'
+  `;
+
+  if (exclude_id) {
+    sql += ` AND ac.id <> ?`;
+    params.push(exclude_id);
+  }
+
+  sql += ` ORDER BY ac.data_inizio DESC`;
+
+  try {
+    const [rows] = await db.query(sql, params);
+    res.json(rows);
+  } catch (e) {
+    console.error("Errore open-notes:", e);
+    res.status(500).json({ message: "Errore recupero note aperte" });
+  }
+});
 
 
 module.exports = router;

@@ -37,7 +37,7 @@ router.post("/upload-image", upload.single("image"), async (req, res) => {
     const [result] = await db.execute(
       `INSERT INTO SchedeImmagini (scheda_id, url, nome_file, utente_upload, timestamp_upload)
        VALUES (?, ?, ?, ?, ?)`,
-      [scheda_id, url, nome_file, utente_upload || null, timestamp_upload]
+      [scheda_id, url, nome_file, utente_upload || null, timestamp_upload],
     );
 
     res.json({
@@ -59,17 +59,16 @@ router.get("/immagini/:scheda_id", async (req, res) => {
   try {
     const [rows] = await db.execute(
       "SELECT id, url, nome_file, utente_upload, timestamp_upload FROM SchedeImmagini WHERE scheda_id = ?",
-      [scheda_id]
+      [scheda_id],
     );
 
     res.json({ success: true, immagini: rows });
   } catch (err) {
     console.error("Errore nel recupero immagini:", err);
-    res.status(500).json({ success: false, error: "Errore nel recupero immagini" });
+    res
+      .status(500)
+      .json({ success: false, error: "Errore nel recupero immagini" });
   }
 });
-
-
-
 
 module.exports = router;

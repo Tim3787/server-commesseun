@@ -63,7 +63,14 @@ router.get("/", async (req, res) => {
  * { nome, reparto, prefisso, colore, descrizione, attivo }
  */
 router.post("/", async (req, res) => {
-  const { nome, reparto = null, prefisso, colore = "#cccccc", descrizione = null, attivo = 1 } = req.body;
+  const {
+    nome,
+    reparto = null,
+    prefisso,
+    colore = "#cccccc",
+    descrizione = null,
+    attivo = 1,
+  } = req.body;
 
   if (!nome || !prefisso) {
     return res.status(400).send("Nome e prefisso sono obbligatori.");
@@ -87,7 +94,9 @@ router.post("/", async (req, res) => {
     res.status(201).send("Tag creato con successo.");
   } catch (err) {
     if (err.code === "ER_DUP_ENTRY") {
-      return res.status(400).send("Esiste già un tag con lo stesso prefisso e nome.");
+      return res
+        .status(400)
+        .send("Esiste già un tag con lo stesso prefisso e nome.");
     }
     console.error("Errore durante la creazione del tag:", err);
     res.status(500).send("Errore durante la creazione del tag.");
@@ -100,7 +109,14 @@ router.post("/", async (req, res) => {
  */
 router.put("/:id", async (req, res) => {
   const { id } = req.params;
-  const { nome, reparto = null, prefisso, colore, descrizione, attivo } = req.body;
+  const {
+    nome,
+    reparto = null,
+    prefisso,
+    colore,
+    descrizione,
+    attivo,
+  } = req.body;
 
   if (!nome || !prefisso) {
     return res.status(400).send("Nome e prefisso sono obbligatori.");
@@ -119,14 +135,16 @@ router.put("/:id", async (req, res) => {
       String(prefisso).trim().toUpperCase(),
       colore ?? "#cccccc",
       descrizione ?? null,
-      attivo === undefined ? 1 : (attivo ? 1 : 0),
+      attivo === undefined ? 1 : attivo ? 1 : 0,
       id,
     ]);
 
     res.send("Tag aggiornato con successo");
   } catch (err) {
     if (err.code === "ER_DUP_ENTRY") {
-      return res.status(400).send("Esiste già un tag con lo stesso prefisso e nome.");
+      return res
+        .status(400)
+        .send("Esiste già un tag con lo stesso prefisso e nome.");
     }
     console.error("Errore durante l'aggiornamento del tag:", err);
     res.status(500).send("Errore durante l'aggiornamento del tag");
@@ -188,14 +206,19 @@ router.put("/scheda/:schedaId", async (req, res) => {
   }
 
   // normalizza: numeri unici
-  const cleanTagIds = [...new Set(tagIds.map(Number))].filter((n) => Number.isInteger(n) && n > 0);
+  const cleanTagIds = [...new Set(tagIds.map(Number))].filter(
+    (n) => Number.isInteger(n) && n > 0,
+  );
 
   const conn = await db.getConnection();
   try {
     await conn.beginTransaction();
 
     // verifica che la scheda esista
-    const [schede] = await conn.query(`SELECT id FROM SchedeTecniche WHERE id = ?`, [schedaId]);
+    const [schede] = await conn.query(
+      `SELECT id FROM SchedeTecniche WHERE id = ?`,
+      [schedaId],
+    );
     if (!schede || schede.length === 0) {
       await conn.rollback();
       return res.status(404).send("Scheda tecnica non trovata.");
@@ -209,14 +232,17 @@ router.put("/scheda/:schedaId", async (req, res) => {
       // opzionale: verifica che i tag esistano e siano attivi
       const [validTags] = await conn.query(
         `SELECT id FROM tag WHERE id IN (${cleanTagIds.map(() => "?").join(",")}) AND attivo = 1`,
-        cleanTagIds
+        cleanTagIds,
       );
       const validTagIds = new Set(validTags.map((t) => t.id));
       const finalIds = cleanTagIds.filter((id) => validTagIds.has(id));
 
       if (finalIds.length > 0) {
         const values = finalIds.map((id) => [Number(schedaId), id]);
-        await conn.query(`INSERT INTO scheda_tag (scheda_id, tag_id) VALUES ?`, [values]);
+        await conn.query(
+          `INSERT INTO scheda_tag (scheda_id, tag_id) VALUES ?`,
+          [values],
+        );
       }
     }
 

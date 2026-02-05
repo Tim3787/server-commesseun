@@ -1,92 +1,92 @@
-const express = require("express");
+const express = require('express');
 const router = express.Router();
-const db = require("../config/db");
-const jwt = require("jsonwebtoken");
-
-
-
-
+const db = require('../config/db');
+const jwt = require('jsonwebtoken');
 
 // Middleware per ottenere l'id utente dal token JWT
 const getUserIdFromToken = (req, res, next) => {
-  const authHeader = req.headers["authorization"];
-  if (!authHeader || !authHeader.startsWith("Bearer ")) {
-    return res.status(401).send("Accesso negato. Nessun token fornito.");
+  const authHeader = req.headers['authorization'];
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return res.status(401).send('Accesso negato. Nessun token fornito.');
   }
 
-  const token = authHeader.split(" ")[1];
+  const token = authHeader.split(' ')[1];
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     req.userId = decoded.id; // Salva l'id utente decodificato nella richiesta
     next();
   } catch (err) {
-    res.status(403).send("Token non valido.");
+    res.status(403).send('Token non valido.', err);
   }
 };
 
 // 📥 GET preferenze dell’utente
-router.get("/", getUserIdFromToken, async (req, res) => {
+router.get('/', getUserIdFromToken, async (req, res) => {
   try {
     const userId = req.userId;
 
-    const [rows] = await db.query(`
+    const [rows] = await db.query(
+      `
       SELECT categoria, via_push, via_email
       FROM notifiche_preferenze
       WHERE user_id = ?
-    `, [userId]);
+    `,
+      [userId]
+    );
 
     res.json(rows);
   } catch (err) {
-    console.error("Errore nel recupero preferenze:", err);
-    res.status(500).send("Errore nel recupero preferenze");
+    console.error('Errore nel recupero preferenze:', err);
+    res.status(500).send('Errore nel recupero preferenze');
   }
 });
 
 // 🔁 POST o UPDATE preferenze
-router.post("/", getUserIdFromToken, async (req, res) => {
+router.post('/', getUserIdFromToken, async (req, res) => {
   const userId = req.userId;
   const { categoria, via_push, via_email } = req.body;
 
   if (!categoria) {
-    return res.status(400).send("Categoria obbligatoria.");
+    return res.status(400).send('Categoria obbligatoria.');
   }
 
   try {
-    await db.query(`
+    await db.query(
+      `
       INSERT INTO notifiche_preferenze (user_id, categoria, via_push, via_email)
       VALUES (?, ?, ?, ?)
       ON DUPLICATE KEY UPDATE via_push = VALUES(via_push), via_email = VALUES(via_email)
-    `, [userId, categoria, via_push, via_email]);
+    `,
+      [userId, categoria, via_push, via_email]
+    );
 
-    res.send("Preferenze salvate.");
+    res.send('Preferenze salvate.');
   } catch (err) {
-    console.error("Errore nel salvataggio delle preferenze:", err);
-    res.status(500).send("Errore nel salvataggio delle preferenze.");
+    console.error('Errore nel salvataggio delle preferenze:', err);
+    res.status(500).send('Errore nel salvataggio delle preferenze.');
   }
 });
 
-
-
 // DELETE - Rimuovi una preferenza
-router.delete("/:categoria", getUserIdFromToken, async (req, res) => {
+router.delete('/:categoria', getUserIdFromToken, async (req, res) => {
   const userId = req.userId;
   const { categoria } = req.params;
 
   if (!categoria) {
-    return res.status(400).send("Categoria obbligatoria.");
+    return res.status(400).send('Categoria obbligatoria.');
   }
 
   try {
     const [result] = await db.query(
-      "DELETE FROM notifiche_preferenze WHERE user_id = ? AND categoria = ?",
+      'DELETE FROM notifiche_preferenze WHERE user_id = ? AND categoria = ?',
       [userId, categoria]
     );
 
     if (result.affectedRows === 0) {
-      return res.status(404).send("Preferenza non trovata.");
+      return res.status(404).send('Preferenza non trovata.');
     }
 
-    res.send("Preferenza eliminata.");
+    res.send('Preferenza eliminata.');
   } catch (err) {
     console.error("Errore durante l'eliminazione della preferenza:", err);
     res.status(500).send("Errore durante l'eliminazione della preferenza.");
@@ -94,5 +94,3 @@ router.delete("/:categoria", getUserIdFromToken, async (req, res) => {
 });
 
 module.exports = router;
-
-

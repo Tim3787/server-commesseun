@@ -19,16 +19,18 @@ router.post("/", async (req, res) => {
   const { nome_stato } = req.body;
 
   // Prima recuperiamo il valore massimo di 'ordine' dalla tabella
-  const maxOrdineSql = "SELECT COALESCE(MAX(ordine), 0) AS max_ordine FROM stati_commessa";
-  
+  const maxOrdineSql =
+    "SELECT COALESCE(MAX(ordine), 0) AS max_ordine FROM stati_commessa";
+
   try {
     const [result] = await db.query(maxOrdineSql);
-    const nuovoOrdine = result[0].max_ordine + 1;  // Incrementiamo il massimo valore di ordine
-    
+    const nuovoOrdine = result[0].max_ordine + 1; // Incrementiamo il massimo valore di ordine
+
     // Inseriamo il nuovo stato con l'ordine progressivo
-    const insertSql = "INSERT INTO stati_commessa (nome_stato, ordine) VALUES (?, ?)";
+    const insertSql =
+      "INSERT INTO stati_commessa (nome_stato, ordine) VALUES (?, ?)";
     await db.query(insertSql, [nome_stato, nuovoOrdine]);
-    
+
     res.status(201).send("Stato commessa aggiunto con successo!");
   } catch (err) {
     console.error("Errore durante l'aggiunta dello stato:", err);
@@ -36,11 +38,10 @@ router.post("/", async (req, res) => {
   }
 });
 
-
 // Eliminare uno stato
 router.delete("/:id", async (req, res) => {
   const { id } = req.params;
-  const sql = "DELETE FROM stati_commessa WHERE id = ?";  // Correzione qui
+  const sql = "DELETE FROM stati_commessa WHERE id = ?"; // Correzione qui
   try {
     const [result] = await db.query(sql, [id]);
     if (result.affectedRows === 0) {

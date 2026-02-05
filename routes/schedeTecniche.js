@@ -1,28 +1,24 @@
-const express = require("express");
+const express = require('express');
 const router = express.Router();
-const db = require("../config/db");
-const path = require("path");
-const fs = require("fs");
-const jwt = require("jsonwebtoken");
+const db = require('../config/db');
+const path = require('path');
+const fs = require('fs');
+const jwt = require('jsonwebtoken');
 
 function authenticateToken(req, res, next) {
-  const authHeader = req.headers["authorization"];
-  const token = authHeader && authHeader.split(" ")[1];
+  const authHeader = req.headers['authorization'];
+  const token = authHeader && authHeader.split(' ')[1];
 
-  if (!authHeader || !authHeader.startsWith("Bearer ")) {
-    return res.status(401).json({ error: "Token mancante" });
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return res.status(401).json({ error: 'Token mancante' });
   }
 
   try {
     req.user = jwt.verify(token, process.env.JWT_SECRET);
     next();
   } catch (err) {
-    return res.status(403).json({ error: "Token non valido" });
+    return res.status(403).json({ error: 'Token non valido', err });
   }
-}
-function estraiHashtag(testo) {
-  const matches = testo.match(/#\w+/g);
-  return matches ? matches.map(tag => tag.substring(1)) : [];
 }
 
 /**
@@ -40,23 +36,23 @@ router.get("/tag", async (req, res) => {
   }
 });
 **/
-router.get("/tipiSchedaTecnica", async (req, res) => {
+router.get('/tipiSchedaTecnica', async (req, res) => {
   try {
     const [tipi] = await db.query(
       `SELECT id, nome, categoria FROM TipiSchedaTecnica ORDER BY nome ASC`
     );
     res.json(tipi);
   } catch (err) {
-    console.error("Errore nel recupero tipi scheda:", err);
-    res.status(500).send("Errore nel recupero tipi scheda");
+    console.error('Errore nel recupero tipi scheda:', err);
+    res.status(500).send('Errore nel recupero tipi scheda');
   }
 });
 
 // GET /api/schedeTecniche/tag?reparto=software&includeGlobal=1&search=uca
-router.get("/tag", async (req, res) => {
+router.get('/tag', async (req, res) => {
   try {
     const { reparto, includeGlobal, search } = req.query;
-    const includeGlobalBool = includeGlobal === "1";
+    const includeGlobalBool = includeGlobal === '1';
 
     let sql = `
       SELECT id, prefisso, nome, reparto, colore
@@ -85,21 +81,18 @@ router.get("/tag", async (req, res) => {
     const [rows] = await db.query(sql, params);
     res.json(rows);
   } catch (err) {
-    console.error("Errore nel recupero dei tag:", err);
-    res.status(500).json({ error: "Errore nel recupero dei tag" });
+    console.error('Errore nel recupero dei tag:', err);
+    res.status(500).json({ error: 'Errore nel recupero dei tag' });
   }
 });
 
 router.post('/tipiSchedaTecnica', async (req, res) => {
   const { nome } = req.body;
-  const [result] = await db.query(
-    `INSERT INTO TipiSchedaTecnica (nome) VALUES (?)`,
-    [nome]
-  );
+  const [result] = await db.query(`INSERT INTO TipiSchedaTecnica (nome) VALUES (?)`, [nome]);
   res.json({ id: result.insertId, nome });
 });
 // GET /api/schedeTecniche/:id/tags
-router.get("/:id/tags", async (req, res) => {
+router.get('/:id/tags', async (req, res) => {
   const { id } = req.params;
   try {
     const [rows] = await db.query(
@@ -114,13 +107,13 @@ router.get("/:id/tags", async (req, res) => {
     );
     res.json(rows);
   } catch (err) {
-    console.error("Errore nel recupero tag scheda:", err);
-    res.status(500).json({ error: "Errore nel recupero tag scheda" });
+    console.error('Errore nel recupero tag scheda:', err);
+    res.status(500).json({ error: 'Errore nel recupero tag scheda' });
   }
 });
 
 // 🔹 GET tutte le schede per una commessa
-router.get("/:commessaId/schede", async (req, res) => {
+router.get('/:commessaId/schede', async (req, res) => {
   const { commessaId } = req.params;
   try {
     const [results] = await db.query(
@@ -139,27 +132,30 @@ router.get("/:commessaId/schede", async (req, res) => {
     );
     res.json(results);
   } catch (err) {
-    console.error("Errore nel recupero delle schede:", err.message);
-    res.status(500).send("Errore nel recupero delle schede.");
+    console.error('Errore nel recupero delle schede:', err.message);
+    res.status(500).send('Errore nel recupero delle schede.');
   }
 });
 
 // GET /api/schedeTecniche/by-tag/:tagId
-router.get("/by-tag/:tagId", async (req, res) => {
+router.get('/by-tag/:tagId', async (req, res) => {
   const { tagId } = req.params;
   try {
-    const [rows] = await db.query(`
+    const [rows] = await db.query(
+      `
       SELECT s.*
       FROM SchedeTecniche s
       JOIN scheda_tag st ON st.scheda_id = s.id
       WHERE st.tag_id = ?
       ORDER BY s.data_modifica DESC
-    `, [tagId]);
+    `,
+      [tagId]
+    );
 
     res.json(rows);
   } catch (err) {
-    console.error("Errore ricerca schede per tag:", err);
-    res.status(500).json({ error: "Errore interno del server" });
+    console.error('Errore ricerca schede per tag:', err);
+    res.status(500).json({ error: 'Errore interno del server' });
   }
 });
 
@@ -196,73 +192,76 @@ router.post("/tags", async (req, res) => {
 **/
 // PUT /api/schedeTecniche/:id/tags-by-names
 // Body: { names: ["pippo","plc_test"] }
-router.put("/:id/tags-by-names", authenticateToken, async (req, res) => {
+router.put('/:id/tags-by-names', authenticateToken, async (req, res) => {
   const schedaId = Number(req.params.id);
   const { names } = req.body;
 
   if (!schedaId || !Array.isArray(names)) {
-    return res.status(400).json({ error: "Parametri non validi" });
+    return res.status(400).json({ error: 'Parametri non validi' });
   }
 
   // pulizia nomi
-  const cleanNames = [...new Set(
-    names
-      .map((s) => String(s || "").trim().toLowerCase())
-      .filter(Boolean)
-  )];
+  const cleanNames = [
+    ...new Set(
+      names
+        .map((s) =>
+          String(s || '')
+            .trim()
+            .toLowerCase()
+        )
+        .filter(Boolean)
+    ),
+  ];
 
   // reparto dal token (tu lo hai già nel token)
-  const reparto = (req.user?.reparto || "").toLowerCase();
+  const reparto = (req.user?.reparto || '').toLowerCase();
   const repartoId = req.user?.reparto_id || null;
 
   // prefisso: usa quello del reparto (fallback hardcoded)
   const prefixMap = {
-    software: "SW",
-    meccanico: "ME",
-    elettrico: "EL",
-    quadristi: "QE",
-    service: "SV",
-    "Tecnico elettrico":"TE",
+    software: 'SW',
+    meccanico: 'ME',
+    elettrico: 'EL',
+    quadristi: 'QE',
+    service: 'SV',
+    'Tecnico elettrico': 'TE',
   };
-  const prefisso = prefixMap[reparto] || "GEN";
+  const prefisso = prefixMap[reparto] || 'GEN';
 
   const conn = await db.getConnection();
   try {
     await conn.beginTransaction();
 
     // verifica scheda esiste
-    const [schedaRows] = await conn.query(
-      "SELECT id FROM SchedeTecniche WHERE id = ?",
-      [schedaId]
-    );
+    const [schedaRows] = await conn.query('SELECT id FROM SchedeTecniche WHERE id = ?', [schedaId]);
     if (!schedaRows.length) {
       await conn.rollback();
-      return res.status(404).json({ error: "Scheda non trovata" });
+      return res.status(404).json({ error: 'Scheda non trovata' });
     }
 
     // 1) per ogni nome: crea tag se non esiste, poi prendi id
     const tagIds = [];
     for (const nome of cleanNames) {
       const [found] = await conn.query(
-  `SELECT id FROM \`tag\`
+        `SELECT id FROM \`tag\`
    WHERE attivo = 1
      AND prefisso = ?
      AND nome = ?
      AND (reparto = ? OR reparto IS NULL)
    LIMIT 1`,
-  [prefisso, nome, reparto || null]
-);
+        [prefisso, nome, reparto || null]
+      );
 
       if (found.length) {
         tagIds.push(found[0].id);
       } else {
-const defaultColor = "#888888"; // scegli tu
+        const defaultColor = '#888888'; // scegli tu
 
-const [ins] = await conn.query(
-  `INSERT INTO \`tag\` (prefisso, nome, reparto, colore, attivo)
+        const [ins] = await conn.query(
+          `INSERT INTO \`tag\` (prefisso, nome, reparto, colore, attivo)
    VALUES (?, ?, ?, ?, 1)`,
-  [prefisso, nome, reparto || null, defaultColor]
-);
+          [prefisso, nome, reparto || null, defaultColor]
+        );
 
         tagIds.push(ins.insertId);
       }
@@ -273,10 +272,7 @@ const [ins] = await conn.query(
 
     if (tagIds.length) {
       const values = tagIds.map((tid) => [schedaId, tid]);
-      await conn.query(
-        `INSERT INTO scheda_tag (scheda_id, tag_id) VALUES ?`,
-        [values]
-      );
+      await conn.query(`INSERT INTO scheda_tag (scheda_id, tag_id) VALUES ?`, [values]);
     }
 
     await conn.commit();
@@ -291,28 +287,25 @@ const [ins] = await conn.query(
     });
   } catch (err) {
     await conn.rollback();
-    console.error("tags-by-names ERROR:", err);
+    console.error('tags-by-names ERROR:', err);
     console.error(err?.stack);
-    res.status(500).json({ error: "Errore interno", detail: err?.message });
+    res.status(500).json({ error: 'Errore interno', detail: err?.message });
   } finally {
     conn.release();
   }
 });
 
-
 // PUT /api/schedeTecniche/:id/tags
 // Body: { tagIds: [1,2,3] }
-router.put("/:id/tags", async (req, res) => {
+router.put('/:id/tags', async (req, res) => {
   const { id } = req.params;
   const { tagIds } = req.body;
 
   if (!Array.isArray(tagIds)) {
-    return res.status(400).json({ error: "tagIds deve essere un array" });
+    return res.status(400).json({ error: 'tagIds deve essere un array' });
   }
 
-  const cleanTagIds = [...new Set(tagIds.map(Number))].filter(
-    (n) => Number.isInteger(n) && n > 0
-  );
+  const cleanTagIds = [...new Set(tagIds.map(Number))].filter((n) => Number.isInteger(n) && n > 0);
 
   const conn = await db.getConnection();
   try {
@@ -322,7 +315,7 @@ router.put("/:id/tags", async (req, res) => {
     const [scheda] = await conn.query(`SELECT id FROM SchedeTecniche WHERE id = ?`, [id]);
     if (!scheda.length) {
       await conn.rollback();
-      return res.status(404).json({ error: "Scheda non trovata" });
+      return res.status(404).json({ error: 'Scheda non trovata' });
     }
 
     // cancella relazioni esistenti
@@ -331,9 +324,7 @@ router.put("/:id/tags", async (req, res) => {
     // inserisci nuove relazioni (solo tag validi e attivi)
     if (cleanTagIds.length) {
       const [valid] = await conn.query(
-        `SELECT id FROM tag WHERE attivo = 1 AND id IN (${cleanTagIds
-          .map(() => "?")
-          .join(",")})`,
+        `SELECT id FROM tag WHERE attivo = 1 AND id IN (${cleanTagIds.map(() => '?').join(',')})`,
         cleanTagIds
       );
 
@@ -350,32 +341,33 @@ router.put("/:id/tags", async (req, res) => {
     res.json({ success: true });
   } catch (err) {
     await conn.rollback();
-    console.error("Errore salvataggio tag scheda:", err);
-    res.status(500).json({ error: "Errore interno durante il salvataggio dei tag." });
+    console.error('Errore salvataggio tag scheda:', err);
+    res.status(500).json({ error: 'Errore interno durante il salvataggio dei tag.' });
   } finally {
     conn.release();
   }
 });
-router.get("/:schedaId/modifiche", async (req, res) => {
+router.get('/:schedaId/modifiche', async (req, res) => {
   const { schedaId } = req.params;
   try {
-    const [results] = await db.query(`
+    const [results] = await db.query(
+      `
       SELECT sm.id, sm.data_modifica, sm.descrizione, r.nome AS risorsa_nome
       FROM SchedeModifiche sm
       LEFT JOIN Risorse r ON sm.risorsa_id = r.id
       WHERE sm.scheda_id = ?
       ORDER BY sm.data_modifica DESC
-    `, [schedaId]);
+    `,
+      [schedaId]
+    );
 
     res.json(results);
   } catch (err) {
-    console.error("Errore nel recupero modifiche:", err.message);
+    console.error('Errore nel recupero modifiche:', err.message);
     console.error(err);
-    res.status(500).send("Errore nel recupero modifiche.");
+    res.status(500).send('Errore nel recupero modifiche.');
   }
 });
-
-
 
 router.delete('/tipiSchedaTecnica/:id', async (req, res) => {
   const { id } = req.params;
@@ -383,10 +375,8 @@ router.delete('/tipiSchedaTecnica/:id', async (req, res) => {
   res.json({ success: true });
 });
 
-
-
 // 🔹 GET tutte le schede tecniche con tipo leggibile
-router.get("/", async (req, res) => {
+router.get('/', async (req, res) => {
   try {
     const [results] = await db.query(`
 SELECT 
@@ -404,55 +394,48 @@ ORDER BY s.data_modifica DESC
     `);
     res.json(results);
   } catch (err) {
-    console.error("Errore nel recupero di tutte le schede:", err.message);
-    res.status(500).send("Errore nel recupero delle schede.");
+    console.error('Errore nel recupero di tutte le schede:', err.message);
+    res.status(500).send('Errore nel recupero delle schede.');
   }
 });
 
-
 // 🔹 POST nuova scheda
-router.post("/", async (req, res) => {
+router.post('/', async (req, res) => {
   try {
     const { commessa_id, tipo_id, titolo, creata_da } = req.body;
 
     if (!commessa_id || !tipo_id) {
-      return res.status(400).send("Dati mancanti");
+      return res.status(400).send('Dati mancanti');
     }
 
-  const sql = `
+    const sql = `
   INSERT INTO SchedeTecniche (commessa_id, tipo_id, creata_da, titolo, intestazione, contenuto, note)
   VALUES (?, ?, ?, ?, JSON_OBJECT(), JSON_OBJECT(), "")
 `;
 
-    const titoloDaInserire = titolo || ""; // se non c'è, metti stringa vuota
+    const titoloDaInserire = titolo || ''; // se non c'è, metti stringa vuota
 
-    const [result] = await db.query(sql, [
-  commessa_id,
-  tipo_id,
-  creata_da,
-  titoloDaInserire
-]);
+    const [result] = await db.query(sql, [commessa_id, tipo_id, creata_da, titoloDaInserire]);
 
-const [newScheda] = await db.query(
-  `SELECT s.id, s.commessa_id, s.tipo_id, s.titolo, s.data_creazione, s.data_modifica,
+    const [newScheda] = await db.query(
+      `SELECT s.id, s.commessa_id, s.tipo_id, s.titolo, s.data_creazione, s.data_modifica,
        s.creata_da, u.username as creato_da_nome, t.nome as tipo
 FROM SchedeTecniche s
 JOIN TipiSchedaTecnica t ON s.tipo_id = t.id
 LEFT JOIN users u ON s.creata_da = u.id
 WHERE s.id = ?`,
-  [result.insertId]
-);
+      [result.insertId]
+    );
 
     res.status(201).json(newScheda[0]);
   } catch (err) {
-    console.error("Errore durante la creazione della scheda:", err.message);
-    res.status(500).send("Errore durante la creazione della scheda.");
+    console.error('Errore durante la creazione della scheda:', err.message);
+    res.status(500).send('Errore durante la creazione della scheda.');
   }
 });
 
-
 // 🔹 PUT aggiorna una scheda
-router.put("/:id", async (req, res) => {
+router.put('/:id', async (req, res) => {
   const { id } = req.params;
   const { intestazione, contenuto, note, allegati_standard, risorsa_id, descrizione } = req.body;
 
@@ -461,17 +444,20 @@ router.put("/:id", async (req, res) => {
     await conn.beginTransaction();
 
     // 🔧 Aggiorna la scheda
-    await conn.query(`
+    await conn.query(
+      `
       UPDATE SchedeTecniche
       SET intestazione = ?, contenuto = ?, note = ?, allegati_standard = ?, data_modifica = CURRENT_TIMESTAMP
       WHERE id = ?
-    `, [
-      JSON.stringify(intestazione),
-      JSON.stringify(contenuto),
-      note,
-      JSON.stringify(allegati_standard),
-      id
-    ]);
+    `,
+      [
+        JSON.stringify(intestazione),
+        JSON.stringify(contenuto),
+        note,
+        JSON.stringify(allegati_standard),
+        id,
+      ]
+    );
 
     /**
     // 🏷️ 1. Estrai hashtag dalla nota
@@ -487,14 +473,17 @@ router.put("/:id", async (req, res) => {
      **/
     // 📝 Inserisci log modifica, se specificato
     if (risorsa_id && descrizione) {
-      await conn.query(`
+      await conn.query(
+        `
         INSERT INTO SchedeModifiche (scheda_id, risorsa_id, descrizione)
         VALUES (?, ?, ?)
-      `, [id, risorsa_id, descrizione]);
+      `,
+        [id, risorsa_id, descrizione]
+      );
     }
 
     await conn.commit();
-    res.send("Scheda aggiornata con successo.");
+    res.send('Scheda aggiornata con successo.');
   } catch (err) {
     await conn.rollback();
     console.error("Errore durante l'aggiornamento della scheda:", err.message);
@@ -505,9 +494,8 @@ router.put("/:id", async (req, res) => {
   }
 });
 
-
 // 🔹 DELETE elimina una scheda
-router.delete("/:id", async (req, res) => {
+router.delete('/:id', async (req, res) => {
   const { id } = req.params;
 
   const conn = await db.getConnection();
@@ -515,24 +503,24 @@ router.delete("/:id", async (req, res) => {
     await conn.beginTransaction();
 
     // 🔍 Recupera tutte le immagini associate
-    const [immagini] = await conn.query("SELECT url FROM SchedeImmagini WHERE scheda_id = ?", [id]);
+    const [immagini] = await conn.query('SELECT url FROM SchedeImmagini WHERE scheda_id = ?', [id]);
 
     // 🧹 Elimina i file fisici
     for (const img of immagini) {
-      const imagePath = path.join(__dirname, "../../public", img.url);
+      const imagePath = path.join(__dirname, '../../public', img.url);
       if (fs.existsSync(imagePath)) {
         fs.unlinkSync(imagePath);
       }
     }
 
     // ❌ Elimina i record delle immagini
-    await conn.query("DELETE FROM SchedeImmagini WHERE scheda_id = ?", [id]);
+    await conn.query('DELETE FROM SchedeImmagini WHERE scheda_id = ?', [id]);
 
     // 🧨 Elimina la scheda
-    await conn.query("DELETE FROM SchedeTecniche WHERE id = ?", [id]);
+    await conn.query('DELETE FROM SchedeTecniche WHERE id = ?', [id]);
 
     await conn.commit();
-    res.status(200).send("Scheda e immagini eliminate con successo.");
+    res.status(200).send('Scheda e immagini eliminate con successo.');
   } catch (err) {
     await conn.rollback();
     console.error("Errore durante l'eliminazione della scheda:", err.message);
@@ -542,34 +530,31 @@ router.delete("/:id", async (req, res) => {
   }
 });
 
-
-router.get("/:id", async (req, res) => {
+router.get('/:id', async (req, res) => {
   const { id } = req.params;
   try {
-    const [results] = await db.query("SELECT * FROM SchedeTecniche WHERE id = ?", [id]);
-    if (results.length === 0) return res.status(404).send("Scheda non trovata.");
+    const [results] = await db.query('SELECT * FROM SchedeTecniche WHERE id = ?', [id]);
+    if (results.length === 0) return res.status(404).send('Scheda non trovata.');
     res.json(results[0]);
   } catch (err) {
-    console.error("Errore nel recupero della scheda:", err.message);
+    console.error('Errore nel recupero della scheda:', err.message);
     console.error(err);
-    res.status(500).send("Errore nel recupero della scheda.");
+    res.status(500).send('Errore nel recupero della scheda.');
   }
 });
 
-
-
 // DELETE /api/schede/immagini/:id
-router.delete("/immagini/:id", async (req, res) => {
+router.delete('/immagini/:id', async (req, res) => {
   const id = req.params.id;
 
   try {
     // 1. Recupera il percorso del file dal database
-    const [rows] = await db.query("SELECT url FROM SchedeImmagini WHERE id = ?", [id]);
+    const [rows] = await db.query('SELECT url FROM SchedeImmagini WHERE id = ?', [id]);
     if (rows.length === 0) {
-      return res.status(404).json({ error: "Immagine non trovata" });
+      return res.status(404).json({ error: 'Immagine non trovata' });
     }
 
-    const imagePath = path.join(__dirname, "../../public", rows[0].url);
+    const imagePath = path.join(__dirname, '../../public', rows[0].url);
 
     // 2. Elimina il file fisico, se esiste
     if (fs.existsSync(imagePath)) {
@@ -577,12 +562,12 @@ router.delete("/immagini/:id", async (req, res) => {
     }
 
     // 3. Elimina il record dal database
-    await db.query("DELETE FROM SchedeImmagini WHERE id = ?", [id]);
+    await db.query('DELETE FROM SchedeImmagini WHERE id = ?', [id]);
 
     res.json({ success: true });
   } catch (error) {
-    console.error("Errore eliminazione immagine:", error);
-    res.status(500).json({ error: "Errore interno del server" });
+    console.error('Errore eliminazione immagine:', error);
+    res.status(500).json({ error: 'Errore interno del server' });
   }
 });
 

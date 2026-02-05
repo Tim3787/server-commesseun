@@ -2,9 +2,6 @@ const express = require("express");
 const router = express.Router();
 const db = require("../config/db");
 
-
-
-
 router.get("/", async (req, res) => {
   try {
     const [rows] = await db.query(`
@@ -18,7 +15,7 @@ router.get("/", async (req, res) => {
   JOIN users u ON nd.user_id = u.id
   JOIN risorse r ON u.risorsa_id = r.id
 `);
-res.json(rows);
+    res.json(rows);
   } catch (err) {
     console.error("Errore nel recupero destinatari:", err);
     res.status(500).send("Errore nel recupero destinatari.");
@@ -57,23 +54,24 @@ router.post("/", async (req, res) => {
 
     const [result] = await db.query(
       `INSERT INTO notifiche_destinatari (categoria, user_id, reparto_id, ruolo) VALUES ?`,
-      [values]
+      [values],
     );
 
-    res.status(201).json({ message: "Assegnazioni salvate", inserted: result.affectedRows });
+    res
+      .status(201)
+      .json({ message: "Assegnazioni salvate", inserted: result.affectedRows });
   } catch (err) {
     console.error("Errore nel salvataggio assegnazioni:", err);
     res.status(500).send("Errore nel salvataggio assegnazioni.");
   }
 });
 
-
 router.delete("/:id", async (req, res) => {
   const { id } = req.params;
   try {
     const [result] = await db.query(
       "DELETE FROM notifiche_destinatari WHERE id = ?",
-      [id]
+      [id],
     );
 
     if (result.affectedRows === 0) {
@@ -88,5 +86,3 @@ router.delete("/:id", async (req, res) => {
 });
 
 module.exports = router;
-
-

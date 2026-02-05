@@ -1,4 +1,4 @@
-const admin = require("firebase-admin");
+const admin = require('firebase-admin');
 
 // Inizializza l'SDK Firebase Admin se non lo hai ancora fatto
 const serviceAccount = JSON.parse(process.env.FIREBASE_CREDENTIALS);
@@ -15,17 +15,14 @@ const sendNotification = async (deviceToken, title, body) => {
       title,
       body,
     },
-    token: deviceToken,  // Token del dispositivo a cui inviare la notifica
+    token: deviceToken, // Token del dispositivo a cui inviare la notifica
   };
 
   try {
-    const response = await admin.messaging().send(message);
-    console.log("Notifica inviata con successo:", response);
+    await admin.messaging().send(message);
   } catch (err) {
     console.error("Errore durante l'invio della notifica:", err);
   }
 };
-
-
 
 module.exports = sendNotification;

@@ -1,10 +1,10 @@
-const express = require("express");
-const db = require("../config/db");
+const express = require('express');
+const db = require('../config/db');
 const router = express.Router();
-const { verificaStatiCommesse, allineaStatiCommesse } = require("./statiAvanzamentoUtils");
+const { verificaStatiCommesse, allineaStatiCommesse } = require('./statiAvanzamentoUtils');
 
 // Recupera tutti gli stati di avanzamento per un reparto specifico
-router.get("/reparto/:reparto_id", async (req, res) => {
+router.get('/reparto/:reparto_id', async (req, res) => {
   const { reparto_id } = req.params;
 
   try {
@@ -14,7 +14,7 @@ router.get("/reparto/:reparto_id", async (req, res) => {
     `);
 
     const results = commesse.flatMap((commessa) => {
-      const stati = JSON.parse(commessa.stati_avanzamento || "[]");
+      const stati = JSON.parse(commessa.stati_avanzamento || '[]');
       return stati
         .filter((stato) => stato.reparto_id === parseInt(reparto_id, 10))
         .map((stato) => ({
@@ -28,20 +28,20 @@ router.get("/reparto/:reparto_id", async (req, res) => {
 
     res.json(results);
   } catch (error) {
-    console.error("Errore durante il recupero degli stati di avanzamento:", error);
-    res.status(500).send("Errore durante il recupero degli stati di avanzamento.");
+    console.error('Errore durante il recupero degli stati di avanzamento:', error);
+    res.status(500).send('Errore durante il recupero degli stati di avanzamento.');
   }
 });
 
 // Recupera tutti gli stati di avanzamento
-router.get("/", async (req, res) => {
-  const sql = "SELECT * FROM stati_avanzamento";
+router.get('/', async (req, res) => {
+  const sql = 'SELECT * FROM stati_avanzamento';
   try {
     const [results] = await db.query(sql);
     res.json(results);
   } catch (err) {
-    console.error("Errore durante il recupero dei reparti:", err);
-    res.status(500).send("Errore durante il recupero dei reparti.");
+    console.error('Errore durante il recupero dei reparti:', err);
+    res.status(500).send('Errore durante il recupero dei reparti.');
   }
 });
 
@@ -140,21 +140,21 @@ router.post("/", async (req, res) => {
  **/
 
 // Aggiungi uno stato di avanzamento a un reparto
-router.post("/", async (req, res) => {
+router.post('/', async (req, res) => {
   const { nome_stato, reparto_id } = req.body;
   if (!nome_stato || !reparto_id) {
-    return res.status(400).send("Nome dello stato e reparto sono obbligatori.");
+    return res.status(400).send('Nome dello stato e reparto sono obbligatori.');
   }
 
   try {
     // 1) Esistenza già presente (consigliato indice UNIQUE su (reparto_id, nome_stato))
     const [existingState] = await db.query(
-      "SELECT id, nome_stato, reparto_id, ordine FROM stati_avanzamento WHERE nome_stato = ? AND reparto_id = ?",
+      'SELECT id, nome_stato, reparto_id, ordine FROM stati_avanzamento WHERE nome_stato = ? AND reparto_id = ?',
       [nome_stato, reparto_id]
     );
     if (existingState.length > 0) {
       // 409 più semantico, ma tieni pure 400 se preferisci
-      return res.status(409).send("Stato di avanzamento già esistente per questo reparto.");
+      return res.status(409).send('Stato di avanzamento già esistente per questo reparto.');
     }
 
     // 2) Calcolo ordine
@@ -175,7 +175,12 @@ router.post("/", async (req, res) => {
     const stato_id = insertResult.insertId;
 
     // 4) Risposta IMMEDIATA al client (evita timeout lato Axios)
-    const created = { id: stato_id, nome_stato, reparto_id: Number(reparto_id), ordine: nuovoOrdine };
+    const created = {
+      id: stato_id,
+      nome_stato,
+      reparto_id: Number(reparto_id),
+      ordine: nuovoOrdine,
+    };
     res.status(201).json(created);
 
     // 5) Lavoro pesante DOPO la risposta (no await): aggiorna commesse e allinea
@@ -193,10 +198,10 @@ router.post("/", async (req, res) => {
         for (const row of rows) {
           let sa = row.stati_avanzamento;
           try {
-            if (typeof sa === "string") sa = JSON.parse(sa);
+            if (typeof sa === 'string') sa = JSON.parse(sa);
             if (!Array.isArray(sa)) sa = [];
           } catch (e) {
-            console.error("JSON stati_avanzamento non valido per commessa", row.id, e);
+            console.error('JSON stati_avanzamento non valido per commessa', row.id, e);
             sa = Array.isArray(sa) ? sa : [];
           }
 
@@ -217,10 +222,10 @@ router.post("/", async (req, res) => {
           });
 
           updates.push(
-            db.query(
-              "UPDATE commesse SET stati_avanzamento = ? WHERE id = ?",
-              [JSON.stringify(sa), row.id]
-            )
+            db.query('UPDATE commesse SET stati_avanzamento = ? WHERE id = ?', [
+              JSON.stringify(sa),
+              row.id,
+            ])
           );
         }
 
@@ -232,54 +237,50 @@ router.post("/", async (req, res) => {
         // Chiamale UNA SOLA VOLTA, non nel for
         await verificaStatiCommesse();
         await allineaStatiCommesse();
-
       } catch (bgErr) {
         console.error("Errore durante l'allineamento post-creazione stato:", bgErr);
       }
     })();
-
   } catch (err) {
     console.error("Errore durante l'aggiunta dello stato di avanzamento:", err);
     return res.status(500).send("Errore durante l'aggiunta dello stato di avanzamento");
   }
 });
 
-
-
 // Modifica uno stato di avanzamento
-router.put("/:id", async (req, res) => {
+router.put('/:id', async (req, res) => {
   const { id } = req.params;
   const { nome_stato, reparto_id } = req.body;
   if (!nome_stato || !reparto_id) {
-    return res.status(400).send("Nome dello stato e reparto sono obbligatori.");
+    return res.status(400).send('Nome dello stato e reparto sono obbligatori.');
   }
-  const sql = "UPDATE stati_avanzamento SET nome_stato = ?, reparto_id = ? WHERE id = ?";
+  const sql = 'UPDATE stati_avanzamento SET nome_stato = ?, reparto_id = ? WHERE id = ?';
   try {
     const [result] = await db.query(sql, [nome_stato, reparto_id, id]);
     await verificaStatiCommesse();
     await allineaStatiCommesse();
     if (result.affectedRows === 0) {
-      return res.status(404).send("Stato di avanzamento non trovato.");
+      return res.status(404).send('Stato di avanzamento non trovato.');
     }
-    res.send("Stato di avanzamento modificato con successo");
+    res.send('Stato di avanzamento modificato con successo');
   } catch (err) {
-    console.error("Errore durante la modifica dello stato di avanzamento:", err);
-    res.status(500).send("Errore durante la modifica dello stato di avanzamento");
+    console.error('Errore durante la modifica dello stato di avanzamento:', err);
+    res.status(500).send('Errore durante la modifica dello stato di avanzamento');
   }
 });
 
 // Elimina uno stato di avanzamento
-router.delete("/:id", async (req, res) => {
+router.delete('/:id', async (req, res) => {
   const { id } = req.params;
-  const sql = "DELETE FROM stati_avanzamento WHERE id = ?";
+  const sql = 'DELETE FROM stati_avanzamento WHERE id = ?';
   try {
     const [result] = await db.query(sql, [id]);
     await verificaStatiCommesse();
     await allineaStatiCommesse();
     if (result.affectedRows === 0) {
-      return res.status(404).send("Stato di avanzamento non trovato.");
+      return res.status(404).send('Stato di avanzamento non trovato.');
     }
-    res.send("Stato di avanzamento eliminato con successo");
+    res.send('Stato di avanzamento eliminato con successo');
   } catch (err) {
     console.error("Errore durante l'eliminazione dello stato di avanzamento:", err);
     res.status(500).send("Errore durante l'eliminazione dello stato di avanzamento");
@@ -303,45 +304,39 @@ router.put('/:id/ordine', async (req, res) => {
     );
 
     if (existing.length > 0) {
-      return res.status(409).send('L\'ordine è già utilizzato da un altro stato in questo reparto.');
+      return res.status(409).send("L'ordine è già utilizzato da un altro stato in questo reparto.");
     }
 
     // Aggiorna l'ordine
-    await db.query(
-      'UPDATE stati_commessa SET ordine = ? WHERE id = ?',
-      [nuovoOrdine, id]
-    );
+    await db.query('UPDATE stati_commessa SET ordine = ? WHERE id = ?', [nuovoOrdine, id]);
 
     res.status(200).send('Ordine aggiornato con successo.');
-  } catch (error) {
-    console.error('Errore durante l\'aggiornamento dell\'ordine:', error);
-    res.status(500).send('Errore durante l\'aggiornamento dell\'ordine.');
-  }
-});
-
-
-
-//Ordina stati avanzamento per reparto
-router.put("/:id/reparti/:repartoId/ordina-stati", async (req, res) => {
-  const { id, repartoId } = req.params;
-  const { stati } = req.body;
-
-  try {
-    const queries = stati.map((stato, index) =>
-      db.query(
-        "UPDATE stati_avanzamento SET ordine = ? WHERE id = ? AND reparto_id = ?",
-        [index + 1, stato.stato_id, repartoId]
-      )
-    );
-    await Promise.all(queries);
-
-    res.status(200).send("Ordine degli stati avanzamento aggiornato con successo!");
   } catch (error) {
     console.error("Errore durante l'aggiornamento dell'ordine:", error);
     res.status(500).send("Errore durante l'aggiornamento dell'ordine.");
   }
 });
 
+//Ordina stati avanzamento per reparto
+router.put('/:id/reparti/:repartoId/ordina-stati', async (req, res) => {
+  const { repartoId } = req.params;
+  const { stati } = req.body;
 
+  try {
+    const queries = stati.map((stato, index) =>
+      db.query('UPDATE stati_avanzamento SET ordine = ? WHERE id = ? AND reparto_id = ?', [
+        index + 1,
+        stato.stato_id,
+        repartoId,
+      ])
+    );
+    await Promise.all(queries);
+
+    res.status(200).send('Ordine degli stati avanzamento aggiornato con successo!');
+  } catch (error) {
+    console.error("Errore durante l'aggiornamento dell'ordine:", error);
+    res.status(500).send("Errore durante l'aggiornamento dell'ordine.");
+  }
+});
 
 module.exports = router;

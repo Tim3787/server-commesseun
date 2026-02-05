@@ -1,21 +1,20 @@
-const express = require("express");
+const express = require('express');
 const router = express.Router();
-const db = require("../config/db");
+const db = require('../config/db');
 
 // Ottenere tutte le attività definite
-router.get("/", async (req, res) => {
+router.get('/', async (req, res) => {
   try {
-    const [results] = await db.query("SELECT * FROM attivita");
+    const [results] = await db.query('SELECT * FROM attivita');
     res.json(results);
   } catch (err) {
-    console.error("Errore durante il recupero delle attività:", err);
-    res.status(500).send("Errore durante il recupero delle attività.");
+    console.error('Errore durante il recupero delle attività:', err);
+    res.status(500).send('Errore durante il recupero delle attività.');
   }
 });
 
-
 // Aggiungere una nuova attività
-router.post("/", async (req, res) => {
+router.post('/', async (req, res) => {
   const { nome_attivita, reparto_id } = req.body;
 
   // Validazione input
@@ -28,7 +27,7 @@ router.post("/", async (req, res) => {
     const checkRepartoSql = `SELECT id FROM reparti WHERE id = ?`;
     const [reparto] = await db.query(checkRepartoSql, [reparto_id]);
     if (!reparto || reparto.length === 0) {
-      return res.status(404).send("Reparto non trovato.");
+      return res.status(404).send('Reparto non trovato.');
     }
 
     // Inserire l'attività nella tabella "attivita"
@@ -36,29 +35,25 @@ router.post("/", async (req, res) => {
       INSERT INTO attivita (nome_attivita, reparto_id) 
       VALUES (?, ?)
     `;
-    const [result] = await db.query(insertAttivitaSql, [nome_attivita, reparto_id]);
+    await db.query(insertAttivitaSql, [nome_attivita, reparto_id]);
 
-    res.status(201).send("Attività aggiunta con successo.");
+    res.status(201).send('Attività aggiunta con successo.');
   } catch (err) {
     console.error("Errore durante l'aggiunta dell'attività:", err);
     res.status(500).send("Errore durante l'aggiunta dell'attività.");
   }
 });
 
-
-
-
-
 // Modifica di un'attività
-router.put("/:id", async (req, res) => {
+router.put('/:id', async (req, res) => {
   const { nome_attivita, reparto } = req.body;
   const { id } = req.params;
   try {
-    const sql = "UPDATE attivita SET nome_attivita = ?, reparto = ? WHERE id = ?";
+    const sql = 'UPDATE attivita SET nome_attivita = ?, reparto = ? WHERE id = ?';
     await db.query(sql, [nome_attivita, reparto, id]);
-    res.send("Attività aggiornata con successo");
+    res.send('Attività aggiornata con successo');
   } catch (err) {
-    if (err.code === "ER_DUP_ENTRY") {
+    if (err.code === 'ER_DUP_ENTRY') {
       return res.status(400).send("Un'attività con lo stesso nome esiste già in questo reparto");
     }
     console.error("Errore durante l'aggiornamento dell'attività:", err);
@@ -67,12 +62,12 @@ router.put("/:id", async (req, res) => {
 });
 
 // Eliminazione di un'attività
-router.delete("/:id", async (req, res) => {
+router.delete('/:id', async (req, res) => {
   const { id } = req.params;
   try {
-    const sql = "DELETE FROM attivita WHERE id = ?";
+    const sql = 'DELETE FROM attivita WHERE id = ?';
     await db.query(sql, [id]);
-    res.status(200).send("Attività eliminata con successo!");
+    res.status(200).send('Attività eliminata con successo!');
   } catch (err) {
     console.error("Errore durante l'eliminazione dell'attività:", err);
     res.status(500).send("Errore durante l'eliminazione dell'attività.");

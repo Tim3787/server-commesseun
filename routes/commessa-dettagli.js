@@ -197,7 +197,7 @@ router.put('/commesse/:commessaId/macchine', async (req, res) => {
 router.get('/commesse/:commessaId/componenti', async (req, res) => {
   const { commessaId } = req.params;
   try {
-    console.log(`Recupero componenti per la commessa ${commessaId}...`);
+
 
     // Verifica se la commessa esiste
     const [commessa] = await db.query('SELECT * FROM commesse WHERE id = ?', [commessaId]);
@@ -213,7 +213,7 @@ router.get('/commesse/:commessaId/componenti', async (req, res) => {
       WHERE cc.commessa_id = ?
     `, [commessaId]);
 
-    console.log("Componenti trovati:", componenti);
+
     
     res.status(200).json(componenti);
   } catch (err) {
@@ -228,7 +228,7 @@ router.get('/commesse/:commessaId/macchine/:macchinaId/componenti', async (req, 
   const { commessaId, macchinaId } = req.params;
   
   try {
-    console.log(`Recupero componenti per la commessa ${commessaId} e la macchina ${macchinaId}...`);
+
 
     // Verifica che la commessa esista
     const [commessa] = await db.query('SELECT id FROM commesse WHERE id = ?', [commessaId]);

@@ -1,2 +1,11 @@
+# variabili d'ambiente
 .env
+
+# credenziali firebase
 commesseun-firebase-adminsdk-fbsvc-2ea2e5c207.json
+
+# upload runtime (NON versionare)
+uploads/
+
+# node
+node_modules/

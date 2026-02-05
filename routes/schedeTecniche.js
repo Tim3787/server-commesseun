@@ -507,11 +507,23 @@ router.delete('/:id', async (req, res) => {
 
     // 🧹 Elimina i file fisici
     for (const img of immagini) {
-      const imagePath = path.join(__dirname, '../../public', img.url);
+      const imagePath = path.join(__dirname, '..', img.url.replace(/^\//, ''));
+
       if (fs.existsSync(imagePath)) {
         fs.unlinkSync(imagePath);
       }
     }
+    // 🔍 Recupera tutti gli allegati associati
+    const [allegati] = await conn.query('SELECT url FROM SchedeAllegati WHERE scheda_id = ?', [id]);
+
+    // 🧹 Elimina i file allegati fisici
+    for (const a of allegati) {
+      const filePath = path.join(__dirname, '..', a.url.replace(/^\//, ''));
+      if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+    }
+
+    // ❌ Elimina i record allegati
+    await conn.query('DELETE FROM SchedeAllegati WHERE scheda_id = ?', [id]);
 
     // ❌ Elimina i record delle immagini
     await conn.query('DELETE FROM SchedeImmagini WHERE scheda_id = ?', [id]);
@@ -520,7 +532,7 @@ router.delete('/:id', async (req, res) => {
     await conn.query('DELETE FROM SchedeTecniche WHERE id = ?', [id]);
 
     await conn.commit();
-    res.status(200).send('Scheda e immagini eliminate con successo.');
+    res.status(200).send('Scheda, immagini e allegati eliminati con successo.');
   } catch (err) {
     await conn.rollback();
     console.error("Errore durante l'eliminazione della scheda:", err.message);
@@ -554,7 +566,7 @@ router.delete('/immagini/:id', async (req, res) => {
       return res.status(404).json({ error: 'Immagine non trovata' });
     }
 
-    const imagePath = path.join(__dirname, '../../public', rows[0].url);
+    const imagePath = path.join(__dirname, '..', rows[0].url.replace(/^\//, ''));
 
     // 2. Elimina il file fisico, se esiste
     if (fs.existsSync(imagePath)) {
@@ -567,6 +579,25 @@ router.delete('/immagini/:id', async (req, res) => {
     res.json({ success: true });
   } catch (error) {
     console.error('Errore eliminazione immagine:', error);
+    res.status(500).json({ error: 'Errore interno del server' });
+  }
+});
+// DELETE /api/schedeTecniche/allegati/:id
+router.delete('/allegati/:id', async (req, res) => {
+  const id = req.params.id;
+
+  try {
+    const [rows] = await db.query('SELECT url FROM SchedeAllegati WHERE id = ?', [id]);
+    if (rows.length === 0) return res.status(404).json({ error: 'Allegato non trovato' });
+
+    const filePath = path.join(__dirname, '..', rows[0].url.replace(/^\//, ''));
+    if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+
+    await db.query('DELETE FROM SchedeAllegati WHERE id = ?', [id]);
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Errore eliminazione allegato:', error);
     res.status(500).json({ error: 'Errore interno del server' });
   }
 });

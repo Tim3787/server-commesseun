@@ -56,6 +56,110 @@ const getUserIdFromToken = (req, res, next) => {
 const SERVICE_REPARTO_ID = 18;
 const SERVICE_ONLINE_RISORSA_ID = 52;
 const AFTERSALES_RISORSA_ID = 98;
+const AFTERSALES_ATTIVITA_ID = 65;
+
+// ✅ After Sales - CREA attività con pochi campi
+// POST /api/attivita_commessa/after-sales
+// body: { numero_commessa, descrizione? }
+router.post('/after-sales', getUserIdFromToken, async (req, res) => {
+  const { numero_commessa, descrizione } = req.body;
+
+  if (!numero_commessa) {
+    return res.status(400).json({ message: 'numero_commessa obbligatorio' });
+  }
+
+  try {
+    // 1) trova commessa_id dal numero_commessa
+    const [commRows] = await db.query(
+      `SELECT id, numero_commessa FROM commesse WHERE numero_commessa = ? LIMIT 1`,
+      [numero_commessa]
+    );
+    if (commRows.length === 0) {
+      return res.status(404).json({ message: 'Commessa non trovata' });
+    }
+    const commessa_id = commRows[0].id;
+
+    // 2) valori automatici
+    const reparto_id = SERVICE_REPARTO_ID;
+    const risorsa_id = AFTERSALES_RISORSA_ID;
+    const attivita_id = AFTERSALES_ATTIVITA_ID;
+    const durata = 1;
+    const stato = 0;
+    const includedWeekends = [];
+    const service_lane = 1;
+
+    // oggi (YYYY-MM-DD)
+    const now = new Date();
+    const yyyy = now.getFullYear();
+    const mm = String(now.getMonth() + 1).padStart(2, '0');
+    const dd = String(now.getDate()).padStart(2, '0');
+    const data_inizio = `${yyyy}-${mm}-${dd}`;
+
+    // 3) insert
+    const [result] = await db.query(
+      `
+      INSERT INTO attivita_commessa
+      (commessa_id, reparto_id, risorsa_id, attivita_id, data_inizio, durata, descrizione, stato, included_weekends, service_lane)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `,
+      [
+        commessa_id,
+        reparto_id,
+        risorsa_id,
+        attivita_id,
+        data_inizio,
+        durata,
+        descrizione || 'After Sales',
+        stato,
+        JSON.stringify(includedWeekends),
+        service_lane,
+      ]
+    );
+
+    // 4) ritorna attività creata (come fai già nel POST normale)
+    const [rows] = await db.query(
+      `
+      SELECT 
+        a.id,
+        a.commessa_id,
+        c.numero_commessa,
+        c.cliente,
+        a.risorsa_id,
+        ri.nome AS risorsa,
+        a.attivita_id,
+        at.nome_attivita,
+        a.data_inizio,
+        a.durata,
+        a.descrizione AS descrizione_attivita,
+        a.stato,
+        a.included_weekends,
+        a.service_lane,
+        r.id AS reparto_id,
+        r.nome AS reparto
+      FROM attivita_commessa a
+      JOIN commesse c ON c.id = a.commessa_id
+      JOIN attivita at ON at.id = a.attivita_id
+      LEFT JOIN risorse ri ON ri.id = a.risorsa_id
+      JOIN reparti r ON r.id = a.reparto_id
+      WHERE a.id = ?
+      `,
+      [result.insertId]
+    );
+
+    const created = rows[0];
+
+    return res.status(201).json({
+      ...created,
+      includedWeekends:
+        typeof created.included_weekends === 'string'
+          ? JSON.parse(created.included_weekends || '[]')
+          : created.included_weekends || [],
+    });
+  } catch (err) {
+    console.error('Errore after-sales:', err);
+    return res.status(500).json({ message: 'Errore server' });
+  }
+});
 
 // ✅ Calendario Assistenze (service online) - GET
 // GET /attivita-commessa/service-calendar?from=YYYY-MM-DD&to=YYYY-MM-DD

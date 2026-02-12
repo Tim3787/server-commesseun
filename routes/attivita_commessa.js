@@ -150,7 +150,7 @@ router.post('/after-sales', getUserIdFromToken, async (req, res) => {
     const created = rows[0];
 
     // 5) invio email (NON bloccare la risposta se fallisce: best effort)
-    const to = 'masiero.timothy@gmail.com'; // es: assistenza@...
+    const to = 'support@unitechpackaging.com'; // es: assistenza@...
     if (to) {
       const subject = `${numero_commessa} - ${cliente} - richiesta aftersales`;
       const body = (descrizione || '').trim() || 'After Sales';

@@ -1,9 +1,10 @@
 const express = require('express');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
-const nodemailer = require('nodemailer');
 const db = require('../config/db');
 const router = express.Router();
+const crypto = require('crypto');
+const { sendEmail } = require('../Utils/mailer');
 
 const authenticateToken = (req, res, next) => {
   const authHeader = req.headers['authorization'];
@@ -250,20 +251,11 @@ router.post('/forgot-password', async (req, res) => {
       email,
     ]);
 
-    // Configura il trasportatore di nodemailer per inviare l'email
-    const transporter = nodemailer.createTransport({
-      service: 'gmail',
-      auth: {
-        user: process.env.EMAIL_USER, // Email da utilizzare (variabile d'ambiente)
-        pass: process.env.EMAIL_PASS, // Password o password per app
-      },
-    });
-
     // Costruisce il link per il reset password (modifica l'URL secondo le tue esigenze)
     const resetLink = `https://commesseun.netlify.app/reset-password?token=${resetToken}`;
 
     // Invia l'email con il link per il reset
-    await transporter.sendMail({
+    await sendEmail({
       to: email,
       subject: 'Recupero Password',
       html: `<p>Clicca sul link per reimpostare la tua password:</p><a href="${resetLink}">${resetLink}</a>`,

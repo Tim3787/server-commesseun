@@ -3,6 +3,7 @@ const router = express.Router();
 const db = require('../config/db');
 const jwt = require('jsonwebtoken');
 const { inviaNotificheUtenti } = require('../Utils/notificationManager');
+const { sendEmail } = require('../Utils/mailer');
 
 (req, res, next) => {
   const authHeader = req.headers['authorization'];
@@ -71,7 +72,7 @@ router.post('/after-sales', getUserIdFromToken, async (req, res) => {
   try {
     // 1) trova commessa_id dal numero_commessa
     const [commRows] = await db.query(
-      `SELECT id, numero_commessa FROM commesse WHERE numero_commessa = ? LIMIT 1`,
+      `SELECT id, numero_commessa, cliente FROM commesse WHERE numero_commessa = ? LIMIT 1`,
       [numero_commessa]
     );
     if (commRows.length === 0) {
@@ -147,6 +148,20 @@ router.post('/after-sales', getUserIdFromToken, async (req, res) => {
     );
 
     const created = rows[0];
+
+    // 5) invio email (NON bloccare la risposta se fallisce: best effort)
+    const to = 'masiero.timothy@gmail.com'; // es: assistenza@...
+    if (to) {
+      const subject = `${numero_commessa} - ${cliente} - richiesta aftersales`;
+      const body = (descrizione || '').trim() || 'After Sales';
+
+      sendEmail({
+        to,
+        subject,
+        text: body,
+        html: `<p>${body.replace(/\n/g, '<br/>')}</p>`,
+      }).catch((e) => console.warn('Errore invio email aftersales:', e?.message || e));
+    }
 
     return res.status(201).json({
       ...created,

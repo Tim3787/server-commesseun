@@ -182,6 +182,7 @@ router.get('/me/note-aperte', getUserIdFromToken, async (req, res) => {
       ac.id,
       ac.commessa_id,
       c.numero_commessa,
+      c.cliente AS cliente, 
       ac.attivita_id,
       ad.nome_attivita,
       ac.data_inizio,
@@ -281,6 +282,7 @@ router.get('/', async (req, res) => {
   ac.id, 
   ac.commessa_id, 
   c.numero_commessa, 
+  c.cliente AS cliente, 
   ac.risorsa_id, 
   r.nome AS risorsa, 
   rep.nome AS reparto, -- Aggiungi il nome del reparto

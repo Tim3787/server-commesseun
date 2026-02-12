@@ -3,7 +3,6 @@ const cors = require('cors');
 const helmet = require('helmet');
 const bodyParser = require('body-parser'); // Importa body-parser
 require('dotenv').config(); // Carica variabili d'ambiente
-const mysql = require('mysql2');
 
 const commesseRoutes = require('./routes/commesse');
 const risorseRoutes = require('./routes/risorse');
@@ -27,14 +26,6 @@ const app = express();
 const cookieParser = require('cookie-parser');
 app.use(cookieParser());
 const tagsRoutes = require('./routes/tags');
-
-// Connessione al database MySQL con variabili d'ambiente
-const connection = mysql.createConnection({
-  host: process.env.DB_HOST,
-  user: process.env.DB_USER,
-  password: process.env.DB_PASSWORD,
-  database: process.env.DB_NAME,
-});
 
 // Middleware di sicurezza e configurazione
 app.use(helmet()); // Aggiunge intestazioni di sicurezza
@@ -66,15 +57,17 @@ app.use('/api/schede-multi', schedeMultiRoutes);
 app.use('/api/notifichePreferenze', notifichePreferenzeRoute);
 app.use('/api/notificheDestinatari', notificheDestinatariRoute);
 app.use('/uploads', express.static('uploads')); // Per servire i file statici
-app.use('/api/upload', uploadRoute); // Per gestire /api/upload-image
+const path = require('path');
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
 app.use('/api/tags', tagsRoutes);
 
 app.use('/api/clienti-specifiche', clientiSpecificheRoutes);
 
 // Middleware di gestione degli errori
-app.use((err, res) => {
-  console.error('Errore globale:', err.message);
-  res.status(err.status || 500).send({
+app.use((err, req, res, next) => {
+  console.error('Errore globale:', err);
+  res.status(err.status || 500).json({
     message: err.message || 'Errore interno del server',
   });
 });
@@ -82,10 +75,3 @@ app.use((err, res) => {
 // Avvio del server
 const PORT = process.env.PORT || 5000; // Usa variabile d'ambiente PORT, se disponibile
 app.listen(PORT, () => {});
-
-connection.connect((err) => {
-  if (err) {
-    console.error('Errore di connessione al database:', err.stack);
-    return;
-  }
-});

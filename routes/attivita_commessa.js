@@ -55,6 +55,7 @@ const getUserIdFromToken = (req, res, next) => {
 // ====== CONFIG ======
 const SERVICE_REPARTO_ID = 18;
 const SERVICE_ONLINE_RISORSA_ID = 52;
+const AFTERSALES_RISORSA_ID = 98;
 
 // ✅ Calendario Assistenze (service online) - GET
 // GET /attivita-commessa/service-calendar?from=YYYY-MM-DD&to=YYYY-MM-DD
@@ -83,13 +84,19 @@ router.get('/service-calendar', getUserIdFromToken, async (req, res) => {
       JOIN attivita ad ON ac.attivita_id = ad.id
       JOIN reparti rep ON ac.reparto_id = rep.id
       WHERE ac.reparto_id = ?
-        AND ac.risorsa_id = ?
+          AND ac.risorsa_id IN (?, ?)
         AND ac.data_inizio >= ?
        AND ac.data_inizio < DATE_ADD(?, INTERVAL 1 DAY)
       ORDER BY ac.data_inizio ASC, ac.service_lane ASC, ac.id ASC
     `;
 
-    const [rows] = await db.query(sql, [SERVICE_REPARTO_ID, SERVICE_ONLINE_RISORSA_ID, from, to]);
+    const [rows] = await db.query(sql, [
+      SERVICE_REPARTO_ID,
+      SERVICE_ONLINE_RISORSA_ID,
+      AFTERSALES_RISORSA_ID,
+      from,
+      to,
+    ]);
 
     const results = rows.map((a) => ({
       ...a,

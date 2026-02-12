@@ -59,9 +59,7 @@ const SERVICE_ONLINE_RISORSA_ID = 52;
 const AFTERSALES_RISORSA_ID = 98;
 const AFTERSALES_ATTIVITA_ID = 65;
 
-// ✅ After Sales - CREA attività con pochi campi
-// POST /api/attivita_commessa/after-sales
-// body: { numero_commessa, descrizione? }
+/ ✅ After Sales - CREA attività con pochi campi
 router.post('/after-sales', getUserIdFromToken, async (req, res) => {
   const { numero_commessa, descrizione } = req.body;
 
@@ -70,15 +68,18 @@ router.post('/after-sales', getUserIdFromToken, async (req, res) => {
   }
 
   try {
-    // 1) trova commessa_id dal numero_commessa
+    // 1) trova commessa_id + cliente
     const [commRows] = await db.query(
       `SELECT id, numero_commessa, cliente FROM commesse WHERE numero_commessa = ? LIMIT 1`,
       [numero_commessa]
     );
+
     if (commRows.length === 0) {
       return res.status(404).json({ message: 'Commessa non trovata' });
     }
+
     const commessa_id = commRows[0].id;
+    const cliente = commRows[0].cliente || '';
 
     // 2) valori automatici
     const reparto_id = SERVICE_REPARTO_ID;
@@ -89,14 +90,13 @@ router.post('/after-sales', getUserIdFromToken, async (req, res) => {
     const includedWeekends = [];
     const service_lane = 1;
 
-    // oggi (YYYY-MM-DD)
     const now = new Date();
     const yyyy = now.getFullYear();
     const mm = String(now.getMonth() + 1).padStart(2, '0');
     const dd = String(now.getDate()).padStart(2, '0');
     const data_inizio = `${yyyy}-${mm}-${dd}`;
 
-    // 3) insert
+    // 3) insert attività
     const [result] = await db.query(
       `
       INSERT INTO attivita_commessa
@@ -110,14 +110,14 @@ router.post('/after-sales', getUserIdFromToken, async (req, res) => {
         attivita_id,
         data_inizio,
         durata,
-        descrizione || 'After Sales',
+        (descrizione || '').trim() || 'After Sales',
         stato,
         JSON.stringify(includedWeekends),
         service_lane,
       ]
     );
 
-    // 4) ritorna attività creata (come fai già nel POST normale)
+    // 4) recupera attività creata
     const [rows] = await db.query(
       `
       SELECT 
@@ -150,7 +150,7 @@ router.post('/after-sales', getUserIdFromToken, async (req, res) => {
     const created = rows[0];
 
     // 5) invio email (NON bloccare la risposta se fallisce: best effort)
-    const to = 'masiero.timothy@gmail.com'; // es: assistenza@...
+    const to = "masiero.timothy@gmail.com"; // es: assistenza@...
     if (to) {
       const subject = `${numero_commessa} - ${cliente} - richiesta aftersales`;
       const body = (descrizione || '').trim() || 'After Sales';

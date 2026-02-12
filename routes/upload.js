@@ -3,6 +3,7 @@ const express = require('express');
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
+const sharp = require('sharp');
 
 const router = express.Router();
 
@@ -22,7 +23,10 @@ const storage = multer.diskStorage({
   },
 });
 
-const upload = multer({ storage: storage });
+const upload = multer({
+  storage,
+  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB
+});
 
 // 📦 Configura cartella allegati
 const allegatiStorage = multer.diskStorage({
@@ -99,26 +103,50 @@ router.post('/upload-image', upload.single('image'), async (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'Nessun file caricato' });
 
   const { scheda_id, utente_upload } = req.body;
-  const nome_file = req.file.filename;
-  const url = `/uploads/${nome_file}`;
-  const timestamp_upload = new Date();
+
+  const originalPath = req.file.path;
 
   try {
+    const optimizedFilename = 'opt-' + path.parse(req.file.filename).name + '.jpg';
+    const optimizedPath = path.join(path.dirname(originalPath), optimizedFilename);
+
+    await sharp(originalPath)
+      .rotate()
+      .resize({
+        width: 1400,
+        withoutEnlargement: true,
+      })
+      .jpeg({ quality: 70 })
+      .toFile(optimizedPath);
+
+    // elimina originale
+    fs.unlinkSync(originalPath);
+
+    const url = `/uploads/${optimizedFilename}`;
+    const timestamp_upload = new Date();
+
     const [result] = await db.execute(
       `INSERT INTO SchedeImmagini (scheda_id, url, nome_file, utente_upload, timestamp_upload)
-       VALUES (?, ?, ?, ?, ?)`,
-      [scheda_id, url, nome_file, utente_upload || null, timestamp_upload]
+     VALUES (?, ?, ?, ?, ?)`,
+      [scheda_id, url, optimizedFilename, utente_upload || null, timestamp_upload]
     );
 
     res.json({
       success: true,
       id: result.insertId,
-      filename: nome_file,
+      filename: optimizedFilename,
       url,
     });
   } catch (err) {
-    console.error('Errore inserimento nel DB:', err);
-    res.status(500).json({ error: 'Errore nel salvataggio nel database' });
+    console.error('Errore upload immagine:', err);
+
+    if (fs.existsSync(originalPath)) {
+      try {
+        fs.unlinkSync(originalPath);
+      } catch (e) {}
+    }
+
+    res.status(500).json({ error: 'Errore upload immagine' });
   }
 });
 

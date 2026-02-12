@@ -69,6 +69,7 @@ router.get('/service-calendar', getUserIdFromToken, async (req, res) => {
     const sql = `
       SELECT 
         ac.id, ac.commessa_id, c.numero_commessa,
+          c.cliente, 
         ac.risorsa_id, r.nome AS risorsa,
         rep.nome AS reparto,
         ac.attivita_id, ad.nome_attivita,

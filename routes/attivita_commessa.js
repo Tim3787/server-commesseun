@@ -59,7 +59,7 @@ const SERVICE_ONLINE_RISORSA_ID = 52;
 const AFTERSALES_RISORSA_ID = 98;
 const AFTERSALES_ATTIVITA_ID = 65;
 
-/ ✅ After Sales - CREA attività con pochi campi
+// ✅ After Sales - CREA attività con pochi campi
 router.post('/after-sales', getUserIdFromToken, async (req, res) => {
   const { numero_commessa, descrizione } = req.body;
 
@@ -150,7 +150,7 @@ router.post('/after-sales', getUserIdFromToken, async (req, res) => {
     const created = rows[0];
 
     // 5) invio email (NON bloccare la risposta se fallisce: best effort)
-    const to = "masiero.timothy@gmail.com"; // es: assistenza@...
+    const to = 'masiero.timothy@gmail.com'; // es: assistenza@...
     if (to) {
       const subject = `${numero_commessa} - ${cliente} - richiesta aftersales`;
       const body = (descrizione || '').trim() || 'After Sales';

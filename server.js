@@ -56,9 +56,9 @@ app.use('/api/schedeTecniche', schedeTecnicheRoutes);
 app.use('/api/schede-multi', schedeMultiRoutes);
 app.use('/api/notifichePreferenze', notifichePreferenzeRoute);
 app.use('/api/notificheDestinatari', notificheDestinatariRoute);
-app.use('/uploads', express.static('uploads')); // Per servire i file statici
 const path = require('path');
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+app.use('/api/upload', uploadRoute);
 
 app.use('/api/tags', tagsRoutes);
 

@@ -26,6 +26,7 @@ const app = express();
 const cookieParser = require('cookie-parser');
 app.use(cookieParser());
 const tagsRoutes = require('./routes/tags');
+const uploadRoute = require('./routes/upload');
 
 // Middleware di sicurezza e configurazione
 app.use(helmet()); // Aggiunge intestazioni di sicurezza

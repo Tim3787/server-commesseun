@@ -367,7 +367,11 @@ router.get('/commesse-by-tag', async (req, res) => {
       WHERE t.attivo = 1
         AND ${whereClause}
       GROUP BY c.id, c.numero_commessa, c.cliente, t.id, t.nome
-      ORDER BY c.numero_commessa DESC
+      ORDER BY
+  CASE WHEN t.nome LIKE CONCAT(?, '%') THEN 0 ELSE 1 END,
+  t.reparto ASC,
+  t.prefisso ASC,
+  t.nome ASC
       LIMIT 30
     `;
 

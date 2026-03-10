@@ -389,7 +389,11 @@ router.get('/commesse-by-tag', async (req, res) => {
       }))
     );
   } catch (err) {
-    console.error('Errore durante ricerca commesse per tag:', err);
+    console.error('Errore durante ricerca commesse per tag:');
+    console.error('message:', err.message);
+    console.error('code:', err.code);
+    console.error('sqlMessage:', err.sqlMessage);
+    console.error('sql:', err.sql);
     res.status(500).send('Errore durante ricerca commesse per tag.');
   }
 });

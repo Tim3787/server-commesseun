@@ -363,7 +363,7 @@ router.get('/commesse-by-tag', async (req, res) => {
       FROM tag t
       JOIN scheda_tag stg ON stg.tag_id = t.id
       JOIN SchedeTecniche st ON st.id = stg.scheda_id
-      JOIN Commesse c ON c.id = st.commessa_id
+      JOIN commesse c ON c.id = st.commessa_id
       WHERE t.attivo = 1
         AND ${whereClause}
       GROUP BY c.id, c.numero_commessa, c.cliente, t.id, t.nome
